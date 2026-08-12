@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import FirebaseMessaging
 
 /**
  브릿지 메서드의 실제 구현 (iOS).
@@ -38,10 +39,19 @@ enum NuplexBridgeAPI {
         case "requestPushPermission":
             NuplexPush.requestPermission { respond($0) }
 
-        // TODO(phase-5b): Firebase 설정 파일이 들어오면 실제 토큰을 돌려준다.
         case "getPushToken":
-            respond(nil)
+            Messaging.messaging().token { token, error in
+                if let error {
+                    // 자격증명이 없거나 APNs 등록 전이다. 웹은 null 을 받고 폴백한다.
+                    NSLog("[Nuplex] FCM 토큰을 받지 못했습니다: \(error.localizedDescription)")
+                }
+                respond(token)
+            }
+
         case "clearPushRegistration":
+            // 세션이 살아 있는 동안 불려야 한다. 로그아웃 뒤에 부르면 401 이다.
+            NuplexTokenRegistrar.unregister(
+                cookieStore: controller?.webView?.configuration.websiteDataStore.httpCookieStore)
             respond(nil)
 
         case "bridgeReady":
@@ -52,6 +62,14 @@ enum NuplexBridgeAPI {
         case "notifyWebReady":
             // 앱이 꺼진 상태에서 알림을 탭했다면 라우트가 여기까지 대기하고 있다.
             NuplexPush.flush { route in controller?.navigate(toRoute: route) }
+            // 웹이 준비됐다는 것은 로그인·프로필 선택을 마쳤다는 뜻이다. 토큰 등록에
+            // 필요한 세션 쿠키가 이제야 생겼으므로 여기서 등록을 시도한다.
+            Messaging.messaging().token { token, _ in
+                guard let token else { return }
+                NuplexTokenRegistrar.registerIfChanged(
+                    token: token,
+                    cookieStore: controller?.webView?.configuration.websiteDataStore.httpCookieStore)
+            }
             respond(nil)
 
         default:

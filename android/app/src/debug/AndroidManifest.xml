@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  디버그 빌드에만 병합되는 매니페스트.
+
+  개발 서버가 평문 HTTP 라서 예외가 필요하다. 릴리스 빌드는 이 파일을 쓰지 않으므로
+  Android 기본값(평문 차단)이 그대로 유지된다.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:networkSecurityConfig="@xml/network_security_config"
+        tools:replace="android:networkSecurityConfig" />
+</manifest>

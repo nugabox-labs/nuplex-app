@@ -121,9 +121,22 @@ public class NuplexBridgeApi {
                 resolve(callId, "\"" + NuplexPush.permissionState(activity) + "\"");
                 break;
 
-            // TODO(phase-5b): Firebase 설정 파일이 들어오면 실제 토큰을 돌려준다.
             case "getPushToken":
+                com.google.firebase.messaging.FirebaseMessaging.getInstance().getToken()
+                    .addOnCompleteListener(task -> {
+                        if (!task.isSuccessful() || task.getResult() == null) {
+                            // 자격증명이 없거나 Play 서비스가 없는 기기다. null 을 돌려준다.
+                            Log.i(TAG, "FCM 토큰을 받지 못했습니다.");
+                            resolve(callId, null);
+                            return;
+                        }
+                        resolve(callId, org.json.JSONObject.quote(task.getResult()));
+                    });
+                break;
+
             case "clearPushRegistration":
+                // 세션이 살아 있는 동안 불려야 한다. 로그아웃 뒤에 부르면 401 이다.
+                NuplexTokenRegistrar.unregister(activity);
                 resolve(callId, null);
                 break;
 
@@ -135,6 +148,9 @@ public class NuplexBridgeApi {
             case "notifyWebReady":
                 // 앱이 꺼진 상태에서 알림을 탭했다면 라우트가 여기까지 대기하고 있다.
                 NuplexRouteQueue.flush(webView, NuplexPreferences.webBaseUrl(activity));
+                // 웹이 준비됐다는 것은 로그인·프로필 선택을 마쳤다는 뜻이다. 토큰 등록에
+                // 필요한 세션 쿠키가 이제야 생겼으므로 여기서 등록을 시도한다.
+                registerPushTokenIfPossible();
                 break;
 
             default:
@@ -179,6 +195,26 @@ public class NuplexBridgeApi {
 
         openExternal(webUrl);
         resolve(callId, "{\"opened\":\"browser\"}");
+    }
+
+    /**
+     * 웹이 준비된 시점에 푸시 토큰을 등록한다.
+     *
+     * 이 시점이어야 하는 이유: /api/app/push/token 은 인증 게이트 뒤에 있는데,
+     * 로그인·프로필 선택을 마치기 전에는 세션 쿠키가 없어 401 이 된다.
+     */
+    private void registerPushTokenIfPossible() {
+        try {
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && task.getResult() != null) {
+                        NuplexTokenRegistrar.registerIfChanged(activity, task.getResult());
+                    }
+                });
+        } catch (Exception e) {
+            // Firebase 설정이 없는 빌드. 푸시만 비활성될 뿐 앱은 정상 동작한다.
+            Log.i(TAG, "FCM 을 사용할 수 없어 토큰 등록을 건너뜁니다.");
+        }
     }
 
     private void openExternal(String url) {

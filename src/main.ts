@@ -95,11 +95,16 @@ export async function bootstrap(): Promise<void> {
     return;
   }
 
+  // 개발 빌드에서 주소를 넘겼다면 그것이 우선이다. 서버가 돌려주는 webBaseUrl 은
+  // 서버 기준 주소(SITE_URL)라서, 에뮬레이터·실기기에서는 닿지 않는 값일 수 있다.
+  // (예: 서버는 localhost:2620 이라고 답하지만 에뮬레이터의 localhost 는 자기 자신이다.)
+  const target = import.meta.env.VITE_WEB_BASE_URL || config.webBaseUrl;
+
   // 네이티브가 푸시 라우트를 조립할 때 쓴다. 알림 탭은 앱이 꺼진 상태에서도 오므로
   // 원격 설정을 기다릴 수 없다 — 마지막으로 확정된 주소를 남겨둔다.
-  await Preferences.set({ key: STORAGE_KEYS.webBaseUrl, value: config.webBaseUrl });
+  await Preferences.set({ key: STORAGE_KEYS.webBaseUrl, value: target });
 
-  goTo(config.webBaseUrl);
+  goTo(target);
 }
 
 async function hasSeenOnboarding(): Promise<boolean> {

@@ -85,5 +85,16 @@ adb logcat -s Nuplex
 VITE_WEB_BASE_URL=http://192.168.0.10:2620 npm run sync
 ```
 
-`allowNavigation` 에 `192.168.*` 과 `10.*` 이 이미 들어 있다.
-릴리스 빌드에서는 이 환경변수를 넘기지 않는다(docs/RELEASE.md 점검 목록).
+`capacitor.config.ts` 의 `allowNavigation` 에도 **그 주소를 정확히** 추가해야 한다
+(예: `'192.168.0.10'`). Android 는 이 목록이 브릿지 주입 허용 origin 이기도 하다.
+
+> **와일드카드 IP(`192.168.*`, `10.*`)를 넣지 말 것.** Android WebView 는 그 형식을
+> origin 규칙으로 거부하고, `addDocumentStartJavaScript` 가 IllegalArgumentException 을
+> 던져 **앱이 시작하자마자 죽는다.** 실제로 겪은 문제다. 지금은 그 예외를 잡아
+> 브릿지 없이 뜨도록 해뒀지만, 애초에 넣지 않는 것이 맞다.
+
+Android 는 평문 HTTP 도 막는다. 디버그 빌드용 예외가
+`android/app/src/debug/res/xml/network_security_config.xml` 에 있으니 맥의 주소를
+거기에도 한 줄 추가한다. 릴리스 빌드는 이 파일을 쓰지 않는다.
+
+릴리스 빌드에서는 `VITE_WEB_BASE_URL` 을 넘기지 않는다(docs/RELEASE.md 점검 목록).

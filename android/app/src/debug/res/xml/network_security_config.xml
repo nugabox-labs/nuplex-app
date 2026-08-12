@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  디버그 빌드 전용. 개발 서버(http://…:2620)를 보려면 평문 HTTP 가 필요하다.
+
+  Android 9+ 는 평문 HTTP 를 기본 차단한다. 그건 옳은 기본값이라 릴리스 빌드에는
+  이 설정을 넣지 않는다 — src/debug/ 에 있으므로 debug 빌드에만 병합된다.
+
+  실기기로 맥의 개발 서버를 볼 때는 아래에 맥의 주소를 한 줄 추가한다.
+  (capacitor.config.ts 의 allowNavigation 에도 같은 주소를 넣어야 한다.)
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <!-- Android 에뮬레이터에서 본 호스트 맥의 주소 -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

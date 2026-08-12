@@ -39,6 +39,9 @@ dependencies {
     // Capacitor 도 같은 라이브러리를 쓰지만 implementation 이라 앱 모듈로 전파되지 않는다.
     // 버전은 variables.gradle 의 값을 그대로 따라가 두 벌로 갈라지지 않게 한다.
     implementation "androidx.webkit:webkit:$androidxWebkitVersion"
+    // 푸시. BoM 이 firebase 라이브러리 간 버전을 맞춰준다 — 개별 버전을 직접 적지 않는다.
+    implementation platform("com.google.firebase:firebase-bom:$firebaseBomVersion")
+    implementation "com.google.firebase:firebase-messaging"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"

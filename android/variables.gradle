@@ -13,4 +13,6 @@ ext {
     androidxJunitVersion = '1.3.0'
     androidxEspressoCoreVersion = '3.7.0'
     cordovaAndroidVersion = '14.0.1'
+    // 푸시 (docs/FIREBASE_SETUP.md). BoM 하나만 올리면 나머지가 따라온다.
+    firebaseBomVersion = '34.5.0'
 }

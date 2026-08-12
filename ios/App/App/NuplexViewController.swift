@@ -16,6 +16,15 @@ class NuplexViewController: CAPBridgeViewController {
 
     private static let messageHandlerName = "nuplexShell"
 
+    /// AppDelegate 가 웹뷰의 쿠키 저장소에 닿아야 한다(푸시 토큰 등록).
+    /// 화면이 하나뿐인 앱이라 마지막으로 만들어진 것이 곧 현재 화면이다.
+    private(set) static weak var current: NuplexViewController?
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        Self.current = self
+    }
+
     override func webView(with frame: CGRect, configuration: WKWebViewConfiguration) -> WKWebView {
         let controller = configuration.userContentController
 

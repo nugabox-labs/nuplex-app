@@ -17,11 +17,13 @@ const config: CapacitorConfig = {
     // 이 목록에 없는 도메인은 웹뷰 내 이동이 차단되고 시스템 브라우저로 나간다.
     // app.plex.tv 를 일부러 넣지 않는다 — Plex 링크는 OS 가 앱으로 인터셉트해야 한다.
     //
-    // 뒤쪽 세 줄은 개발용이다. 실기기에서 맥의 dev 서버(:2620)를 보려면 사설망
-    // 주소로 이동할 수 있어야 한다. 사설 대역이라 스토어 빌드에 남아도 외부에서
-    // 악용할 수 있는 경로는 아니지만, 릴리스 점검 목록에 확인 항목을 둔다
-    // (docs/RELEASE.md).
-    allowNavigation: ['nuplex.nugabox.com', 'localhost', '192.168.*', '10.*'],
+    // 뒤쪽 둘은 개발용이다(10.0.2.2 는 Android 에뮬레이터에서 본 맥의 주소).
+    //
+    // **와일드카드 IP(192.168.* 같은)를 넣지 말 것.** Android WebView 의 origin 규칙은
+    // 그 형식을 거부하고, 브릿지 주입 단계에서 IllegalArgumentException 이 나서
+    // 앱이 시작하자마자 죽는다. 실기기로 개발 서버를 볼 때는 맥의 주소를 정확히
+    // 적는다 (예: '192.168.0.10'). docs/TROUBLESHOOTING.md 참고.
+    allowNavigation: ['nuplex.nugabox.com', 'localhost', '10.0.2.2'],
   },
   ios: {
     // §5.2 — 웹이 서버사이드에서도 앱 여부를 판별할 수 있게 UA 접미사를 붙인다.

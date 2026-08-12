@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Xcode 의 Signing & Capabilities → Push Notifications 가 만드는 파일이다.
+	  UI 로 추가하지 않고 직접 넣었다.
+
+	  development 로 두면 개발 빌드는 APNs 샌드박스로, App Store/TestFlight 빌드는
+	  Xcode 가 배포 시 production 으로 바꿔 서명한다. 그래서 이 값을 production 으로
+	  바꿀 필요는 없다.
+
+	  주의: 이 파일만으로는 실기기 빌드가 되지 않는다. Apple Developer 포털의
+	  App ID(com.nugabox.nuplex)에 Push Notifications 를 켜야 프로비저닝 프로파일에
+	  권한이 들어간다.
+	-->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>

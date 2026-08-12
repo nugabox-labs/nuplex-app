@@ -66,6 +66,12 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- Xcode 의 Background Modes → Remote notifications 에 해당한다.
+	     사일런트 푸시(content-available)로 배지만 갱신할 때 앱이 깨어나려면 필요하다. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<!-- canOpenURL 로 Plex 앱 설치 여부를 물어보려면 스킴을 미리 선언해야 한다.
 	     기본 경로는 https 링크(Universal Links)라 이 선언 없이도 동작하지만,
 	     ADR-003 의 실험 경로(plex:// 커스텀 스킴)를 켜려면 필요하다. -->

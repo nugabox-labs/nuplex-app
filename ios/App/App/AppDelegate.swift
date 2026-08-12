@@ -1,6 +1,8 @@
 import UIKit
 import Capacitor
 import UserNotifications
+import FirebaseCore
+import FirebaseMessaging
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -12,8 +14,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // 상태에서 탭하면 웹뷰가 뜨기도 전에 이벤트가 오기 때문이다.
         UNUserNotificationCenter.current().delegate = self
 
-        // TODO(phase-5b): Firebase 설정 파일이 들어오면 FirebaseApp.configure() 와
-        //                 FCM 토큰 수신을 여기에 붙인다 (docs/FIREBASE_SETUP.md).
+        // GoogleService-Info.plist 가 없으면 configure() 가 죽는다. 설정 파일 없이
+        // 빌드한 개발자가 앱조차 못 켜는 일이 없도록 존재를 먼저 확인한다.
+        if Bundle.main.url(forResource: "GoogleService-Info", withExtension: "plist") != nil {
+            FirebaseApp.configure()
+            Messaging.messaging().delegate = self
+        } else {
+            NSLog("[Nuplex] GoogleService-Info.plist 가 없어 푸시를 비활성합니다 (docs/FIREBASE_SETUP.md).")
+        }
         return true
     }
 
@@ -23,8 +31,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         _ application: UIApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
-        // TODO(phase-5b): FCM 에 APNs 토큰을 넘긴다. 서버는 FCM 토큰 하나로 통일해
-        //                 발송하므로(nuplex/lib/push/fcm.ts) 이 값을 직접 쓰지 않는다.
+        // 서버는 FCM 토큰 하나로 통일해 발송하므로(nuplex/lib/push/fcm.ts) APNs 토큰을
+        // 직접 쓰지 않는다. FCM 에 넘겨 매핑시키기만 한다.
+        Messaging.messaging().apnsToken = deviceToken
         NSLog("[Nuplex] APNs 등록 완료 (\(deviceToken.count) bytes)")
     }
 
@@ -100,5 +109,22 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
             .compactMap { ($0 as? UIWindowScene)?.keyWindow?.rootViewController }
             .compactMap { $0 as? NuplexViewController }
             .first
+    }
+}
+
+// MARK: - FCM 토큰
+
+extension AppDelegate: MessagingDelegate {
+
+    /// 최초 발급과 갱신 모두 여기로 온다.
+    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        guard let fcmToken else { return }
+        NSLog("[Nuplex] FCM 토큰 수신")
+        // 로그인 전이면 401 로 실패한다. 그건 정상이다 — 웹이 준비를 알릴 때
+        // (notifyWebReady) 다시 시도한다.
+        NuplexTokenRegistrar.registerIfChanged(
+            token: fcmToken,
+            cookieStore: NuplexViewController.current?.webView?.configuration.websiteDataStore.httpCookieStore
+        )
     }
 }

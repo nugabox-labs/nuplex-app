@@ -7,26 +7,28 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1B2C3D012000000000000F3 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = A1B2C3D011000000000000F2 /* FirebaseMessaging */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
-		A1B2C3D005000000000000B5 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D005000000000000A5 /* GoogleService-Info.plist */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
-		A1B2C3D004000000000000B4 /* NuplexPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D004000000000000A4 /* NuplexPreferences.swift */; };
-		A1B2C3D003000000000000B3 /* NuplexPush.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D003000000000000A3 /* NuplexPush.swift */; };
-		A1B2C3D002000000000000B2 /* NuplexBridgeAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D002000000000000A2 /* NuplexBridgeAPI.swift */; };
+		A1B2C3D007000000000000B7 /* NuplexTokenRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D007000000000000A7 /* NuplexTokenRegistrar.swift */; };
 		A1B2C3D001000000000000B1 /* NuplexViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D001000000000000A1 /* NuplexViewController.swift */; };
+		A1B2C3D002000000000000B2 /* NuplexBridgeAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D002000000000000A2 /* NuplexBridgeAPI.swift */; };
+		A1B2C3D003000000000000B3 /* NuplexPush.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D003000000000000A3 /* NuplexPush.swift */; };
+		A1B2C3D004000000000000B4 /* NuplexPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D004000000000000A4 /* NuplexPreferences.swift */; };
+		A1B2C3D005000000000000B5 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D005000000000000A5 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
-		A1B2C3D005000000000000A5 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		A1B2C3D006000000000000A6 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		504EC30C1FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
@@ -35,11 +37,13 @@
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
-		A1B2C3D004000000000000A4 /* NuplexPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuplexPreferences.swift; sourceTree = "<group>"; };
-		A1B2C3D003000000000000A3 /* NuplexPush.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuplexPush.swift; sourceTree = "<group>"; };
-		A1B2C3D002000000000000A2 /* NuplexBridgeAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuplexBridgeAPI.swift; sourceTree = "<group>"; };
-		A1B2C3D001000000000000A1 /* NuplexViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuplexViewController.swift; sourceTree = "<group>"; };
+		A1B2C3D007000000000000A7 /* NuplexTokenRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuplexTokenRegistrar.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		A1B2C3D001000000000000A1 /* NuplexViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuplexViewController.swift; sourceTree = "<group>"; };
+		A1B2C3D002000000000000A2 /* NuplexBridgeAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuplexBridgeAPI.swift; sourceTree = "<group>"; };
+		A1B2C3D003000000000000A3 /* NuplexPush.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuplexPush.swift; sourceTree = "<group>"; };
+		A1B2C3D004000000000000A4 /* NuplexPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuplexPreferences.swift; sourceTree = "<group>"; };
+		A1B2C3D005000000000000A5 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -48,6 +52,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */,
+				A1B2C3D012000000000000F3 /* FirebaseMessaging in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,11 +80,13 @@
 			isa = PBXGroup;
 			children = (
 				9582B6822FE993A50072D4E8 /* SceneDelegate.swift */,
+				A1B2C3D007000000000000A7 /* NuplexTokenRegistrar.swift */,
 				A1B2C3D004000000000000A4 /* NuplexPreferences.swift */,
 				A1B2C3D003000000000000A3 /* NuplexPush.swift */,
 				A1B2C3D002000000000000A2 /* NuplexBridgeAPI.swift */,
 				A1B2C3D001000000000000A1 /* NuplexViewController.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
+				A1B2C3D006000000000000A6 /* App.entitlements */,
 				A1B2C3D005000000000000A5 /* GoogleService-Info.plist */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
@@ -110,6 +117,7 @@
 			name = App;
 			packageProductDependencies = (
 				4D22ABE82AF431CB00220026 /* CapApp-SPM */,
+				A1B2C3D011000000000000F2 /* FirebaseMessaging */,
 			);
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
@@ -142,6 +150,7 @@
 			mainGroup = 504EC2FB1FED79650016851F;
 			packageReferences = (
 				D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */,
+				A1B2C3D010000000000000F1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
@@ -176,6 +185,7 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
+				A1B2C3D007000000000000B7 /* NuplexTokenRegistrar.swift in Sources */,
 				A1B2C3D004000000000000B4 /* NuplexPreferences.swift in Sources */,
 				A1B2C3D003000000000000B3 /* NuplexPush.swift in Sources */,
 				A1B2C3D002000000000000B2 /* NuplexBridgeAPI.swift in Sources */,
@@ -319,8 +329,10 @@
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U5796QB9C8;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -341,8 +353,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U5796QB9C8;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -388,11 +402,27 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		A1B2C3D010000000000000F1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		4D22ABE82AF431CB00220026 /* CapApp-SPM */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */;
 			productName = "CapApp-SPM";
+		};
+		A1B2C3D011000000000000F2 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1B2C3D010000000000000F1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
