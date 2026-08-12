@@ -28,4 +28,6 @@ export const STORAGE_KEYS = {
   remoteConfigCache: 'nuplex.remoteConfig.v1',
   pushToken: 'nuplex.pushToken.v1',
   onboardingSeen: 'nuplex.onboardingSeen.v1',
+  /** 강제 업데이트·점검 화면에 넘기는 문구와 스토어 주소. */
+  updateScreenState: 'nuplex.updateScreen.v1',
 } as const;
