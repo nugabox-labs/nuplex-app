@@ -107,9 +107,7 @@ public class NuplexBridgeApi {
                 break;
 
             case "openInPlex":
-                // TODO(phase-4): Plex 딥링크. 지금은 넘겨받은 https 주소를 그대로 연다.
-                openExternal(args.optString("webUrl", null));
-                resolve(callId, "{\"opened\":\"browser\"}");
+                openInPlex(callId, args.optString("webUrl", null));
                 break;
 
             // TODO(phase-5): 푸시 구현과 함께 채운다. 계약을 먼저 세워두지 않으면
@@ -139,6 +137,43 @@ public class NuplexBridgeApi {
                 Log.w(TAG, "알 수 없는 브릿지 메서드: " + method);
                 resolve(callId, null);
         }
+    }
+
+    /**
+     * Plex 로 이동한다 (ADR-003).
+     *
+     * https://app.plex.tv/... 링크를 그대로 넘긴다. Plex 앱이 App Links 로 가로채고,
+     * 없으면 브라우저로 간다. plex:// 커스텀 스킴은 공식 문서가 없어 쓰지 않는다.
+     *
+     * FLAG_ACTIVITY_REQUIRE_NON_BROWSER 로 "앱이 아니면 열지 마라" 를 먼저 시도한다.
+     * 그래야 앱으로 갔는지 브라우저로 갔는지를 실제로 구분할 수 있다. 이게 없으면
+     * 안드로이드가 조용히 브라우저를 띄우고 우리는 앱이 열린 줄 안다.
+     */
+    private void openInPlex(int callId, String webUrl) {
+        if (webUrl == null || webUrl.isEmpty()) {
+            resolve(callId, "{\"opened\":\"browser\"}");
+            return;
+        }
+
+        // TODO(verify): plex:// 커스텀 스킴은 공식 문서가 없어 형식을 확인하기 전에는
+        // 구현하지 않는다. 확인 절차는 docs/PLEX_DEEPLINK.md 참고.
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            try {
+                Intent appOnly = new Intent(Intent.ACTION_VIEW, Uri.parse(webUrl));
+                appOnly.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                appOnly.addFlags(Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER);
+                activity.startActivity(appOnly);
+                resolve(callId, "{\"opened\":\"app\"}");
+                return;
+            } catch (Exception e) {
+                // 앱이 없거나 링크를 자기 것으로 등록하지 않았다. 브라우저로 간다.
+                Log.i(TAG, "Plex 앱으로 열지 못해 브라우저로 넘깁니다.");
+            }
+        }
+
+        openExternal(webUrl);
+        resolve(callId, "{\"opened\":\"browser\"}");
     }
 
     private void openExternal(String url) {

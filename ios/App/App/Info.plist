@@ -66,5 +66,12 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- canOpenURL 로 Plex 앱 설치 여부를 물어보려면 스킴을 미리 선언해야 한다.
+	     기본 경로는 https 링크(Universal Links)라 이 선언 없이도 동작하지만,
+	     ADR-003 의 실험 경로(plex:// 커스텀 스킴)를 켜려면 필요하다. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>plex</string>
+	</array>
 </dict>
 </plist>

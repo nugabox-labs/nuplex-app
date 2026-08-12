@@ -38,4 +38,21 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+      Android 11+ 는 다른 앱이 보이지 않는다(패키지 가시성). 여기 선언한 것만
+      질의·해석할 수 있다. https 링크를 여는 것 자체는 선언 없이도 되지만,
+      Plex 앱이 있는지 확인하거나 ADR-003 의 실험 경로(plex:// 스킴)를 쓰려면
+      선언이 있어야 한다.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" android:host="app.plex.tv" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="plex" />
+        </intent>
+    </queries>
 </manifest>
