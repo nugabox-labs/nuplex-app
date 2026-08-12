@@ -38,6 +38,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+ 는 알림도 런타임 권한이다. 온보딩에서 동의를 받은 뒤에 요청한다. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!--
       Android 11+ 는 다른 앱이 보이지 않는다(패키지 가시성). 여기 선언한 것만

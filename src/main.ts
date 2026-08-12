@@ -87,7 +87,29 @@ export async function bootstrap(): Promise<void> {
     return;
   }
 
+  // 알림을 쓸 수 있는 상태이고 아직 설명한 적이 없으면 온보딩을 한 번 보여준다.
+  // 서버에 FCM 자격증명이 없으면(pushEnabled=false) 묻지 않는다 — 받을 수도 없는
+  // 알림을 허용해 달라고 하는 것만큼 나쁜 첫인상이 없다.
+  if (config.features.pushEnabled && !(await hasSeenOnboarding())) {
+    goTo('/onboarding.html');
+    return;
+  }
+
+  // 네이티브가 푸시 라우트를 조립할 때 쓴다. 알림 탭은 앱이 꺼진 상태에서도 오므로
+  // 원격 설정을 기다릴 수 없다 — 마지막으로 확정된 주소를 남겨둔다.
+  await Preferences.set({ key: STORAGE_KEYS.webBaseUrl, value: config.webBaseUrl });
+
   goTo(config.webBaseUrl);
+}
+
+async function hasSeenOnboarding(): Promise<boolean> {
+  try {
+    const { value } = await Preferences.get({ key: STORAGE_KEYS.onboardingSeen });
+    return value === '1';
+  } catch {
+    // 읽지 못했다면 다시 보여주기보다 넘어간다. 온보딩 때문에 앱을 못 쓰면 안 된다.
+    return true;
+  }
 }
 
 async function storeUrlFor(config: RemoteConfig): Promise<string> {

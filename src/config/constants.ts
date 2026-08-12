@@ -36,4 +36,12 @@ export const STORAGE_KEYS = {
   onboardingSeen: 'nuplex.onboardingSeen.v1',
   /** 강제 업데이트·점검 화면에 넘기는 문구와 스토어 주소. */
   updateScreenState: 'nuplex.updateScreen.v1',
+  /**
+   * 마지막으로 확정된 웹 주소.
+   *
+   * 네이티브가 푸시 라우트를 조립할 때 읽는다. 알림 탭은 앱이 종료된 상태에서도
+   * 오므로, 네이티브가 원격 설정을 기다리지 않고 바로 쓸 값이 필요하다.
+   * 네이티브 쪽 참조: NuplexPreferences.java / NuplexPreferences.swift
+   */
+  webBaseUrl: 'nuplex.webBaseUrl.v1',
 } as const;

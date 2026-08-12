@@ -1,5 +1,6 @@
 package com.nugabox.nuplex;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.webkit.WebView;
@@ -26,11 +27,19 @@ public class MainActivity extends BridgeActivity {
 
     private static final String TAG = "Nuplex";
 
+    /** 알림 탭으로 전달되는 라우트. NuplexMessagingService 가 PendingIntent 에 넣는다. */
+    static final String EXTRA_ROUTE = "nuplex_route";
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         WebView webView = getBridge().getWebView();
+
+        NuplexPush.createChannels(this);
+        // 콜드 스타트로 들어온 알림 탭. 이 시점에는 웹뷰가 준비되지 않았으므로
+        // 대기열이 받아둔다.
+        handleRouteIntent(getIntent());
         NuplexBridgeApi api = new NuplexBridgeApi(this, webView);
 
         // 네이티브 수신 창구. 이 인터페이스는 origin 을 가리지 않으므로,
@@ -56,5 +65,23 @@ public class MainActivity extends BridgeActivity {
             // 웹은 브릿지를 optional 로 다루므로 앱은 그대로 동작한다.
             Log.w(TAG, "WebView 가 DOCUMENT_START_SCRIPT 를 지원하지 않아 브릿지를 주입하지 않습니다.");
         }
+    }
+
+    /** 앱이 이미 떠 있는 상태에서 알림을 탭한 경우. launchMode 가 singleTask 라 여기로 온다. */
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleRouteIntent(intent);
+    }
+
+    private void handleRouteIntent(Intent intent) {
+        if (intent == null) return;
+        String route = intent.getStringExtra(EXTRA_ROUTE);
+        if (route == null) return;
+
+        // 같은 알림을 두 번 처리하지 않도록 꺼내면서 지운다.
+        intent.removeExtra(EXTRA_ROUTE);
+        NuplexRouteQueue.offer(route, getBridge().getWebView(), NuplexPreferences.webBaseUrl(this));
     }
 }

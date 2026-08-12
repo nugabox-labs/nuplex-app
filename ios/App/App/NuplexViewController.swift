@@ -51,6 +51,24 @@ class NuplexViewController: CAPBridgeViewController {
             .replacingOccurrences(of: "__NUPLEX_BRIDGE_VERSION__", with: String(NuplexBridgeAPI.bridgeVersion))
     }
 
+    /**
+     푸시 라우트로 이동한다.
+
+     route 는 경로 문자열이다. 도메인은 셸이 붙인다 — 도메인이 바뀌어도 이미 발송된
+     알림이 깨지지 않게 하기 위함이다(docs/PUSH_PAYLOAD.md).
+     */
+    func navigate(toRoute route: String) {
+        let urlString = NuplexPreferences.webBaseUrl + route
+        guard let url = URL(string: urlString) else {
+            NSLog("[Nuplex] 잘못된 푸시 라우트: \(urlString)")
+            return
+        }
+        NSLog("[Nuplex] 푸시 라우트로 이동: \(urlString)")
+        DispatchQueue.main.async { [weak self] in
+            self?.webView?.load(URLRequest(url: url))
+        }
+    }
+
     /// 주입된 스크립트의 Promise 를 푼다. 웹뷰 평가는 메인 스레드에서만 안전하다.
     func resolve(callId: Int, payload: Any?) {
         guard callId != 0 else { return }  // fire-and-forget 호출
@@ -81,7 +99,7 @@ private class NuplexMessageHandler: NSObject, WKScriptMessageHandler {
         let callId = body["id"] as? Int ?? 0
         let args = body["args"] as? [String: Any] ?? [:]
 
-        NuplexBridgeAPI.handle(method: method, args: args) { [weak controller] payload in
+        NuplexBridgeAPI.handle(method: method, args: args, controller: controller) { [weak controller] payload in
             controller?.resolve(callId: callId, payload: payload)
         }
     }

@@ -17,6 +17,7 @@ enum NuplexBridgeAPI {
     static func handle(
         method: String,
         args: [String: Any],
+        controller: NuplexViewController?,
         respond: @escaping (Any?) -> Void
     ) {
         switch method {
@@ -31,12 +32,13 @@ enum NuplexBridgeAPI {
         case "openInPlex":
             openInPlex(webUrl: args["webUrl"] as? String, respond: respond)
 
-        // TODO(phase-5): 아래 넷은 푸시 구현과 함께 채운다. 계약을 먼저 세워두는 이유는
-        // 웹이 bridgeVersion 만 보고 호출하기 때문이다 — 없으면 TypeError 로 화면이 죽는다.
         case "getPushPermission":
-            respond("prompt")
+            NuplexPush.permissionState { respond($0) }
+
         case "requestPushPermission":
-            respond("denied")
+            NuplexPush.requestPermission { respond($0) }
+
+        // TODO(phase-5b): Firebase 설정 파일이 들어오면 실제 토큰을 돌려준다.
         case "getPushToken":
             respond(nil)
         case "clearPushRegistration":
@@ -48,7 +50,8 @@ enum NuplexBridgeAPI {
             respond(nil)
 
         case "notifyWebReady":
-            // TODO(phase-5): 대기 중인 푸시 라우트를 흘려보낸다.
+            // 앱이 꺼진 상태에서 알림을 탭했다면 라우트가 여기까지 대기하고 있다.
+            NuplexPush.flush { route in controller?.navigate(toRoute: route) }
             respond(nil)
 
         default:

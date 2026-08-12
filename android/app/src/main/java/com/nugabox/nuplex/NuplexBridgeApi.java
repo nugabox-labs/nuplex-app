@@ -110,14 +110,18 @@ public class NuplexBridgeApi {
                 openInPlex(callId, args.optString("webUrl", null));
                 break;
 
-            // TODO(phase-5): 푸시 구현과 함께 채운다. 계약을 먼저 세워두지 않으면
-            // 웹이 bridgeVersion 만 보고 부르다가 TypeError 로 화면이 죽는다.
             case "getPushPermission":
-                resolve(callId, "\"prompt\"");
+                resolve(callId, "\"" + NuplexPush.permissionState(activity) + "\"");
                 break;
+
             case "requestPushPermission":
-                resolve(callId, "\"denied\"");
+                // OS 다이얼로그 결과는 onRequestPermissionsResult 로 따로 온다. 여기서는
+                // 지금 상태를 돌려주고, 웹은 화면에 돌아왔을 때 다시 조회하면 된다.
+                NuplexPush.requestPermission(activity);
+                resolve(callId, "\"" + NuplexPush.permissionState(activity) + "\"");
                 break;
+
+            // TODO(phase-5b): Firebase 설정 파일이 들어오면 실제 토큰을 돌려준다.
             case "getPushToken":
             case "clearPushRegistration":
                 resolve(callId, null);
@@ -129,7 +133,8 @@ public class NuplexBridgeApi {
                 break;
 
             case "notifyWebReady":
-                // TODO(phase-5): 대기 중인 푸시 라우트를 흘려보낸다.
+                // 앱이 꺼진 상태에서 알림을 탭했다면 라우트가 여기까지 대기하고 있다.
+                NuplexRouteQueue.flush(webView, NuplexPreferences.webBaseUrl(activity));
                 break;
 
             default:
