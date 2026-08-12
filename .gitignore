@@ -1,0 +1,46 @@
+# dependencies
+node_modules/
+
+# build output
+www/
+dist/
+*.tsbuildinfo
+
+# secrets — never commit (see docs/TROUBLESHOOTING.md)
+.env
+.env.*
+!.env.example
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
+ios/App/App/*.mobileprovision
+*.keystore
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+fastlane/*.json
+android/keystore.properties
+
+# native build artifacts
+ios/App/Pods/
+ios/App/build/
+ios/App/output/
+ios/App/App/public/
+ios/DerivedData/
+android/.gradle/
+android/build/
+android/app/build/
+android/captures/
+android/local.properties
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/app/capacitor.build.gradle
+android/capacitor.settings.gradle
+
+# os / editor
+.DS_Store
+.idea/
+*.iml
+xcuserdata/
+*.xcworkspace/xcuserdata/
