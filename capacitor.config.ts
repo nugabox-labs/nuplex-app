@@ -16,7 +16,12 @@ const config: CapacitorConfig = {
     iosScheme: 'https',
     // 이 목록에 없는 도메인은 웹뷰 내 이동이 차단되고 시스템 브라우저로 나간다.
     // app.plex.tv 를 일부러 넣지 않는다 — Plex 링크는 OS 가 앱으로 인터셉트해야 한다.
-    allowNavigation: ['nuplex.nugabox.com'],
+    //
+    // 뒤쪽 세 줄은 개발용이다. 실기기에서 맥의 dev 서버(:2620)를 보려면 사설망
+    // 주소로 이동할 수 있어야 한다. 사설 대역이라 스토어 빌드에 남아도 외부에서
+    // 악용할 수 있는 경로는 아니지만, 릴리스 점검 목록에 확인 항목을 둔다
+    // (docs/RELEASE.md).
+    allowNavigation: ['nuplex.nugabox.com', 'localhost', '192.168.*', '10.*'],
   },
   ios: {
     // §5.2 — 웹이 서버사이드에서도 앱 여부를 판별할 수 있게 UA 접미사를 붙인다.

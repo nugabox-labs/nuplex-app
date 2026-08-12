@@ -8,7 +8,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         window = UIWindow(windowScene: windowScene)
-        window?.rootViewController = CAPBridgeViewController()
+        // 기본 CAPBridgeViewController 대신 브릿지 주입을 얹은 서브클래스를 쓴다.
+        // 원격 페이지에는 셸이 직접 window.NuplexNative 를 넣어야 한다(ADR-001).
+        window?.rootViewController = NuplexViewController()
         window?.makeKeyAndVisible()
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)

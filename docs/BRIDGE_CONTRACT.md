@@ -24,6 +24,14 @@
 
 웹뷰 로드 시 `window.NuplexNative` 가 주입된다. 브라우저에는 없다.
 
+주입은 **네이티브가 문서 시작 시점에** 한다(ADR-004). 따라서 웹의 첫 스크립트가
+돌기 전에 이미 존재한다. 그래도 순서를 확신할 수 없다면 `nuplexnativeready`
+이벤트를 함께 들으면 된다.
+
+```ts
+window.addEventListener('nuplexnativeready', () => { /* 브릿지 준비됨 */ })
+```
+
 ```ts
 interface NuplexNative {
   /** 이 계약의 버전. 웹은 이 값으로 기능 지원 여부를 판단한다. */

@@ -50,3 +50,40 @@ CI 처럼 적절한 JDK 가 이미 잡힌 환경에서는 `CAP_SKIP_JBR=1` 로 �
 
 웹뷰 캐시 문제다. `nuplex` 웹의 HTML 응답에 `Cache-Control: no-store` 가 붙어 있는지
 확인한다. 해시가 붙은 정적 자산만 장기 캐시해야 한다. (설계 명세 §9.3)
+
+### 원격 설정 조회가 항상 실패하고 오프라인 화면만 뜸
+
+셸의 로컬 페이지 origin 은 `capacitor://localhost` 다. 여기서 웹 도메인으로 보내는
+브라우저 `fetch` 는 교차 출처라 CORS 에 막힌다. 그래서 `remote-config.ts` 는
+`CapacitorHttp`(네이티브에서 나가는 요청)를 쓴다. 이걸 다시 `fetch` 로 바꾸면
+증상이 재발한다.
+
+웹뷰가 웹 도메인으로 이동한 뒤의 요청은 동일 출처라 영향이 없다.
+
+### 원격 페이지에서 window.NuplexNative 가 undefined
+
+주입 자체가 실패한 경우다. 네이티브 로그에 `[Nuplex] 브릿지 주입됨: <url>` 이
+찍히는지 본다.
+
+```bash
+# iOS 시뮬레이터
+xcrun simctl spawn booted log show --last 2m --predicate 'eventMessage CONTAINS "Nuplex"'
+# Android
+adb logcat -s Nuplex
+```
+
+- 로그가 아예 없다 → 스크립트를 못 읽었다. `npm run sync` 후 앱을 다시 설치한다
+  (`ios/App/App/public/nuplex-bridge.js`, `android/app/src/main/assets/public/nuplex-bridge.js` 존재 확인).
+- 로컬 주소로만 찍히고 웹 도메인으로는 안 찍힌다 → `capacitor.config.ts` 의
+  `allowNavigation` 에 그 도메인이 없다. Android 는 이 목록이 주입 허용 origin 이다.
+
+### 실기기에서 맥의 dev 서버를 보고 싶다
+
+`localhost` 는 기기 자신을 가리킨다. 맥의 사설망 주소를 넣어 빌드한다.
+
+```bash
+VITE_WEB_BASE_URL=http://192.168.0.10:2620 npm run sync
+```
+
+`allowNavigation` 에 `192.168.*` 과 `10.*` 이 이미 들어 있다.
+릴리스 빌드에서는 이 환경변수를 넘기지 않는다(docs/RELEASE.md 점검 목록).

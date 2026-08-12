@@ -5,11 +5,17 @@
  * 설정 API 장애가 앱 부팅 불가로 이어져서는 안 된다.
  */
 
-/** 운영 웹 도메인. capacitor.config.ts 의 server.allowNavigation 과 반드시 일치시킬 것. */
-export const DEFAULT_WEB_BASE_URL = 'https://nuplex.nugabox.com';
-
-/** 로컬 개발 서버 (nuplex 웹의 `npm run dev` 는 0.0.0.0:2620 을 연다). */
-export const DEV_WEB_BASE_URL = 'http://localhost:2620';
+/**
+ * 웹 도메인. capacitor.config.ts 의 server.allowNavigation 과 반드시 일치시킬 것.
+ *
+ * 개발 중 맥에서 띄운 dev 서버(:2620)를 실기기로 보려면 빌드할 때 넘긴다.
+ * 시뮬레이터/에뮬레이터가 아니라 실기기라면 localhost 가 아니라 맥의 사설망
+ * 주소여야 한다.
+ *
+ *   VITE_WEB_BASE_URL=http://192.168.0.10:2620 npm run sync
+ */
+export const DEFAULT_WEB_BASE_URL =
+  import.meta.env.VITE_WEB_BASE_URL || 'https://nuplex.nugabox.com';
 
 /** 원격 설정 엔드포인트 경로 (§9.1). */
 export const REMOTE_CONFIG_PATH = '/api/app/config';

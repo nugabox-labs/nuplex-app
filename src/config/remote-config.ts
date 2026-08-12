@@ -1,3 +1,4 @@
+import { CapacitorHttp } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import {
   DEFAULT_WEB_BASE_URL,
@@ -106,14 +107,24 @@ export async function loadRemoteConfig(
   baseUrl: string = DEFAULT_WEB_BASE_URL,
 ): Promise<{ config: RemoteConfig; source: ConfigSource }> {
   try {
-    const response = await fetch(`${baseUrl}${REMOTE_CONFIG_PATH}`, {
+    // 브라우저 fetch 를 쓰지 않는다. 셸의 로컬 페이지 origin 은 capacitor://localhost
+    // 라서 웹 도메인으로 보내는 요청이 전부 교차 출처가 되고, 서버가 CORS 헤더를
+    // 주지 않으면 차단된다. CapacitorHttp 는 네이티브에서 나가므로 CORS 를 타지 않는다.
+    // (웹뷰가 웹 도메인으로 이동한 뒤에는 동일 출처라 이 문제가 없다.)
+    const response = await CapacitorHttp.get({
+      url: `${baseUrl}${REMOTE_CONFIG_PATH}`,
       headers: { Accept: 'application/json' },
-      cache: 'no-store',
-      signal: AbortSignal.timeout(REMOTE_CONFIG_TIMEOUT_MS),
+      readTimeout: REMOTE_CONFIG_TIMEOUT_MS,
+      connectTimeout: REMOTE_CONFIG_TIMEOUT_MS,
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (response.status < 200 || response.status >= 300) {
+      throw new Error(`HTTP ${response.status}`);
+    }
 
-    const config = normalize(await response.json());
+    // 네이티브가 JSON 을 이미 파싱해 주기도 하고, 문자열로 주기도 한다.
+    const raw =
+      typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+    const config = normalize(raw);
     await writeCache(config);
     return { config, source: 'network' };
   } catch {
