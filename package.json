@@ -32,6 +32,7 @@
     "@capawesome/capacitor-badge": "8.0.2"
   },
   "devDependencies": {
+    "@capacitor/assets": "3.0.5",
     "@capacitor/cli": "8.5.0",
     "typescript": "5.9.3",
     "vite": "8.2.1"
