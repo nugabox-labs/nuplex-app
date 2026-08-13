@@ -16,10 +16,29 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // 릴리스 서명. 키는 저장소에 두지 않는다 — CI 가 Secrets 에서 환경변수로 넘긴다
+    // (.github/workflows/android-release.yml, docs/RELEASE.md).
+    // 환경변수가 없으면 서명 설정 자체를 만들지 않는다. 로컬에서 릴리스 빌드를
+    // 돌려볼 때 키가 없다고 빌드가 죽지 않게 하기 위함이다.
+    def keystorePath = System.getenv("NUPLEX_KEYSTORE")
+    signingConfigs {
+        if (keystorePath) {
+            release {
+                storeFile file(keystorePath)
+                storePassword System.getenv("NUPLEX_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("NUPLEX_KEY_ALIAS")
+                keyPassword System.getenv("NUPLEX_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (keystorePath) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
@@ -33,6 +52,8 @@ repositories {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    // 뒤로가기(OnBackPressedDispatcher)와 엣지 투 엣지(EdgeToEdge)에 필요하다.
+    implementation "androidx.activity:activity:$androidxActivityVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     // 원격 페이지에 브릿지를 주입하는 데 필요하다(WebViewCompat.addDocumentStartJavaScript).

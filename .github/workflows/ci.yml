@@ -1,0 +1,71 @@
+name: CI
+
+# 셸 자산과 네이티브 프로젝트가 깨지지 않았는지만 본다.
+# 스토어 업로드는 release 워크플로가 따로 한다.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  web:
+    name: 셸 빌드 · 타입 검사
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      # www/ 는 커밋하지 않으므로, 빌드 산출물이 실제로 나왔는지 확인한다.
+      - name: 브릿지 스크립트가 산출물에 포함됐는지
+        run: test -f www/nuplex-bridge.js
+
+  android:
+    name: Android 빌드
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - run: npm run build
+      # Firebase 설정 파일은 저장소에 없다. 없어도 빌드는 통과해야 한다
+      # (android/app/build.gradle 이 파일이 없으면 플러그인을 건너뛴다).
+      - name: Capacitor sync
+        run: npm run cap -- sync android
+        env:
+          CAP_SKIP_JBR: '1'
+      - name: assembleDebug
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+  ios:
+    name: iOS 빌드
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run cap -- sync ios
+      # 서명 없이 시뮬레이터용으로만 빌드한다. 인증서가 CI 에 없어도 컴파일 오류는 잡힌다.
+      - name: 시뮬레이터 빌드
+        working-directory: ios/App
+        run: |
+          xcodebuild -scheme App -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build

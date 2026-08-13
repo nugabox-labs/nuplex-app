@@ -1,0 +1,93 @@
+name: Android 릴리스
+
+# 태그를 밀면 AAB 를 만들어 Play Internal Testing 에 올린다.
+#
+# **필요한 Secrets** (없으면 잡이 일찍 실패한다):
+#   ANDROID_KEYSTORE_BASE64     업로드 키스토어를 base64 로 인코딩한 값
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_ALIAS
+#   ANDROID_KEY_PASSWORD
+#   GOOGLE_SERVICES_JSON        Firebase 설정 파일 내용
+#   PLAY_SERVICE_ACCOUNT_JSON   Play Console 서비스 계정 키
+#
+# 서명 키는 저장소에 절대 두지 않는다(docs/RELEASE.md).
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: 필요한 Secrets 확인
+        run: |
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD GOOGLE_SERVICES_JSON; do
+            if [ -z "${!name}" ]; then echo "::error::$name 이 설정되지 않았습니다"; exit 1; fi
+          done
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+
+      - name: 시크릿 파일 배치
+        run: |
+          echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/upload.keystore
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run cap -- sync android
+        env:
+          CAP_SKIP_JBR: '1'
+
+      # 빌드번호는 사람이 관리하지 않는다. 손으로 올리면 반드시 언젠가 같은 번호를
+      # 두 번 올려 스토어가 거부한다 (docs/RELEASE.md).
+      - name: versionCode 채번
+        working-directory: android
+        run: |
+          sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" app/build.gradle
+          grep versionCode app/build.gradle
+
+      - name: AAB 빌드
+        working-directory: android
+        run: ./gradlew bundleRelease --no-daemon
+        env:
+          NUPLEX_KEYSTORE: ${{ github.workspace }}/android/upload.keystore
+          NUPLEX_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          NUPLEX_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          NUPLEX_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aab
+          path: android/app/build/outputs/bundle/release/*.aab
+
+      # TODO: Play Console 업로드. 앱을 한 번은 콘솔에서 수동으로 올려 등록해야
+      #       서비스 계정 업로드가 동작한다. 등록 후 아래 주석을 푼다.
+      # - uses: r0adkll/upload-google-play@v1
+      #   with:
+      #     serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+      #     packageName: com.nugabox.nuplex
+      #     releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+      #     track: internal
+
+      - name: 시크릿 파일 정리
+        if: always()
+        run: rm -f android/app/google-services.json android/upload.keystore

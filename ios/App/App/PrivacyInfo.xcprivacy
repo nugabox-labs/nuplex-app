@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  App Store 제출에 필수인 개인정보 매니페스트.
+
+  없으면 업로드 단계에서 거부되거나 심사에서 지적된다. 서드파티 SDK(Firebase 등)는
+  자체 매니페스트를 포함하지만, 앱 레벨 매니페스트는 별도로 있어야 한다.
+
+  선언 내용은 셸이 실제로 하는 일에 맞춘다. 셸은 콘텐츠를 웹뷰로 보여줄 뿐이고,
+  자체적으로 수집하는 것은 푸시 알림에 필요한 기기 식별자뿐이다.
+  나중에 분석 SDK 등을 붙이면 이 파일도 함께 고쳐야 한다.
+-->
+<plist version="1.0">
+<dict>
+	<!-- 광고 추적에 쓰지 않는다. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<dict>
+			<!-- 푸시 토큰과 기기 식별자. 알림 발송 대상 식별에만 쓴다. -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeDeviceID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
+
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<!-- 원격 설정 캐시 · 기기 식별자 · 마지막 등록 토큰을 UserDefaults 에 둔다.
+			     (@capacitor/preferences 도 같은 API 를 쓴다) -->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

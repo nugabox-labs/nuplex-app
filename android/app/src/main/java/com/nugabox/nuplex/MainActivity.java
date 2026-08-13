@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.webkit.WebView;
 
+import androidx.activity.EdgeToEdge;
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 
@@ -42,6 +43,14 @@ public class MainActivity extends BridgeActivity {
 
         // 로드 실패를 WebView 기본 에러 페이지 대신 우리 오프라인 화면으로 돌린다.
         NuplexWebViewClient.install(getBridge());
+
+        // 기본 뒤로가기는 앱을 곧바로 끈다. 웹뷰 히스토리를 먼저 소비한다.
+        NuplexBackPress.install(this, webView);
+
+        // Android 15+ 는 엣지 투 엣지가 강제다. 미리 켜서 두 버전의 동작을 하나로
+        // 맞춘다. 잘림은 웹 쪽 CSS 의 env(safe-area-inset-*) 이 받는다
+        // (nuplex 웹 layout.tsx 의 viewport-fit=cover).
+        EdgeToEdge.enable(this);
 
         NuplexPush.createChannels(this);
         // 콜드 스타트로 들어온 알림 탭. 이 시점에는 웹뷰가 준비되지 않았으므로

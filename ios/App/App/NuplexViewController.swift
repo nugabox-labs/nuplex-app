@@ -23,41 +23,48 @@ class NuplexViewController: CAPBridgeViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         Self.current = self
+
+        // 화면 왼쪽 끝에서 스와이프하면 뒤로 간다. iOS 사용자가 브라우저에서 늘 쓰는
+        // 동작이라 없으면 "뒤로 갈 방법이 없는 앱" 이 된다 — Android 와 달리 iOS 에는
+        // 하드웨어 뒤로가기가 없다.
+        webView?.allowsBackForwardNavigationGestures = true
+
+        installNavigationProxy()
     }
 
-    override func webView(with frame: CGRect, configuration: WKWebViewConfiguration) -> WKWebView {
-        let controller = configuration.userContentController
+    /**
+     웹 로드 실패를 우리 오프라인 화면으로 돌린다.
 
-        // WKUserScript 는 origin 을 가리지 않고 모든 메인프레임 문서에 들어간다.
-        // 원격 페이지에도 브릿지가 생기는 이유가 이것이다.
-        if let source = Self.bridgeScript() {
-            controller.addUserScript(
-                WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true)
-            )
+     Capacitor 가 웹뷰의 navigationDelegate 를 쥐고 있어서 그냥 override 할 수 없다.
+     그래서 프록시를 끼운다 — 실패 두 가지만 가로채고 나머지 호출은 원래 델리게이트로
+     그대로 넘긴다. 그냥 두면 로드 실패 시 빈 화면이 남는다(설계 명세 §9.4).
+     */
+    private var navigationProxy: NuplexNavigationProxy?
+
+    private func installNavigationProxy() {
+        guard let webView, let original = webView.navigationDelegate else { return }
+        let proxy = NuplexNavigationProxy(target: original) { [weak self] error in
+            self?.loadOfflineScreen(reason: error)
         }
-
-        controller.add(NuplexMessageHandler(controller: self), name: Self.messageHandlerName)
-
-        return super.webView(with: frame, configuration: configuration)
+        navigationProxy = proxy
+        webView.navigationDelegate = proxy
     }
 
-    /// 번들의 스크립트를 읽어 자리표시자를 채운다. 실패하면 브릿지 없이 뜬다 —
-    /// 웹은 브릿지를 optional 로 다루므로 앱이 못 쓰게 되지는 않는다.
-    private static func bridgeScript() -> String? {
-        // public/ 은 웹 자산 폴더다. cap sync 가 www/ 를 통째로 여기에 복사한다.
-        guard let url = Bundle.main.url(
-                forResource: "nuplex-bridge", withExtension: "js", subdirectory: "public"),
-              let template = try? String(contentsOf: url, encoding: .utf8)
-        else {
-            NSLog("[Nuplex] public/nuplex-bridge.js 를 번들에서 찾지 못했습니다. npm run sync 를 실행하세요.")
-            return nil
-        }
+    private func loadOfflineScreen(reason: Error) {
+        // 사용자가 이동을 취소한 것뿐이면 화면을 바꾸지 않는다.
+        guard (reason as NSError).code != NSURLErrorCancelled else { return }
 
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
-        return template
-            .replacingOccurrences(of: "__NUPLEX_PLATFORM__", with: "ios")
-            .replacingOccurrences(of: "__NUPLEX_APP_VERSION__", with: version)
-            .replacingOccurrences(of: "__NUPLEX_BRIDGE_VERSION__", with: String(NuplexBridgeAPI.bridgeVersion))
+        NSLog("[Nuplex] 웹 로드 실패 → 오프라인 화면으로: \(reason.localizedDescription)")
+
+        // 웹이 죽은 동안 도착한 푸시 라우트를 밀어넣지 않도록 준비 상태를 되돌린다.
+        NuplexPush.reset()
+
+        guard let offline = Bundle.main.url(
+            forResource: "offline", withExtension: "html", subdirectory: "public") else { return }
+        DispatchQueue.main.async { [weak self] in
+            self?.webView?.loadFileURL(
+                offline, allowingReadAccessTo: offline.deletingLastPathComponent())
+        }
     }
 
     /**
@@ -111,5 +118,45 @@ private class NuplexMessageHandler: NSObject, WKScriptMessageHandler {
         NuplexBridgeAPI.handle(method: method, args: args, controller: controller) { [weak controller] payload in
             controller?.resolve(callId: callId, payload: payload)
         }
+    }
+}
+
+/**
+ navigationDelegate 프록시.
+
+ WKNavigationDelegate 의 메서드는 대부분 optional 이라, 우리가 구현하지 않은 호출은
+ 원래 델리게이트(Capacitor 의 WebViewDelegationHandler)로 넘겨야 한다. ObjC 런타임의
+ 메시지 포워딩을 쓰면 메서드를 하나하나 옮겨 적지 않아도 된다.
+ */
+private final class NuplexNavigationProxy: NSObject, WKNavigationDelegate {
+
+    private let target: WKNavigationDelegate
+    private let onFail: (Error) -> Void
+
+    init(target: WKNavigationDelegate, onFail: @escaping (Error) -> Void) {
+        self.target = target
+        self.onFail = onFail
+    }
+
+    override func responds(to aSelector: Selector!) -> Bool {
+        super.responds(to: aSelector) || target.responds(to: aSelector)
+    }
+
+    override func forwardingTarget(for aSelector: Selector!) -> Any? {
+        target.responds(to: aSelector) ? target : super.forwardingTarget(for: aSelector)
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        didFailProvisionalNavigation navigation: WKNavigation!,
+        withError error: Error
+    ) {
+        target.webView?(webView, didFailProvisionalNavigation: navigation, withError: error)
+        onFail(error)
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        target.webView?(webView, didFail: navigation, withError: error)
+        onFail(error)
     }
 }
