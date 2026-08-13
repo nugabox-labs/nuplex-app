@@ -55,5 +55,6 @@
 - [ ] 실제 푸시 수신 (포그라운드 / 백그라운드 / 종료 상태)
 - [ ] 로그인 후 토큰 등록 성공 → 서버 `device` 테이블에 행 생성
 - [ ] 로그아웃 시 토큰 해제
-- [ ] iOS 푸시 전반 — **Apple Developer 포털 App ID 에 Push Notifications 활성화 필요**
+- [ ] iOS 푸시 전반 (Apple Developer 포털 App ID 의 Push Notifications 는 활성화 확인됨.
+      Team ID U5796QB9C8)
 - [ ] 권한 거부 상태에서의 동작
