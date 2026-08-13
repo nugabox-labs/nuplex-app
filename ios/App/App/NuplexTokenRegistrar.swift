@@ -13,6 +13,17 @@ import WebKit
  */
 enum NuplexTokenRegistrar {
 
+    /**
+     리다이렉트를 따라가지 않는 세션.
+
+     기본 URLSession 은 리다이렉트를 따라가서 로그인 화면 HTML 을 200 으로 돌려준다.
+     그러면 등록에 성공한 줄 알고 토큰을 캐시해버려, 진짜 등록이 영영 일어나지 않는다.
+     미인증은 미인증으로 보여야 다음 기회에 다시 시도한다.
+     */
+    private static let session: URLSession = {
+        URLSession(configuration: .default, delegate: RedirectBlocker(), delegateQueue: nil)
+    }()
+
     private static let deviceIdKey = "nuplex.deviceId"
     private static let lastTokenKey = "nuplex.lastRegisteredToken"
 
@@ -49,8 +60,9 @@ enum NuplexTokenRegistrar {
             case 200..<300:
                 UserDefaults.standard.set(token, forKey: lastTokenKey)
                 NSLog("[Nuplex] 푸시 토큰 등록 완료")
-            case 401, 403:
-                // 아직 로그인 전이다. 다음 기회에 다시 시도한다.
+            case 300..<400, 401, 403:
+                // 아직 로그인 전이다. 인증 게이트가 401 대신 /login 으로 리다이렉트하기도
+                // 한다. 다음 기회에 다시 시도한다.
                 NSLog("[Nuplex] 아직 로그인 전이라 토큰 등록을 미룹니다 (\(status))")
             default:
                 NSLog("[Nuplex] 푸시 토큰 등록 실패 (\(status))")
@@ -85,7 +97,7 @@ enum NuplexTokenRegistrar {
 
         // 웹뷰가 쥐고 있는 세션 쿠키를 실어야 인증을 통과한다.
         attachCookies(to: request, from: cookieStore, host: url.host) { prepared in
-            URLSession.shared.dataTask(with: prepared) { _, response, error in
+            session.dataTask(with: prepared) { _, response, error in
                 if let error {
                     NSLog("[Nuplex] 토큰 요청 실패: \(error.localizedDescription)")
                     completion(-1)
@@ -119,5 +131,18 @@ enum NuplexTokenRegistrar {
                 completion(prepared)
             }
         }
+    }
+}
+
+/// 리다이렉트를 막는다. 이유는 NuplexTokenRegistrar.session 주석 참고.
+private final class RedirectBlocker: NSObject, URLSessionTaskDelegate {
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        completionHandler(nil)
     }
 }

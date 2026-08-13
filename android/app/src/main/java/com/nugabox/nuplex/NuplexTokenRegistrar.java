@@ -76,8 +76,9 @@ final class NuplexTokenRegistrar {
                     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                         .edit().putString(KEY_LAST_TOKEN, token).apply();
                     Log.i(TAG, "푸시 토큰 등록 완료");
-                } else if (status == 401 || status == 403) {
-                    // 아직 로그인 전이다. 다음 기회에 다시 시도한다.
+                } else if (status == 401 || status == 403 || (status >= 300 && status < 400)) {
+                    // 아직 로그인 전이다. 인증 게이트가 401 대신 /login 으로 리다이렉트(307)
+                    // 하기도 한다 — 그걸 실패로 시끄럽게 남기면 진짜 오류가 묻힌다.
                     Log.i(TAG, "아직 로그인 전이라 토큰 등록을 미룹니다 (" + status + ")");
                 } else {
                     Log.w(TAG, "푸시 토큰 등록 실패 (" + status + ")");
@@ -113,6 +114,9 @@ final class NuplexTokenRegistrar {
         conn.setRequestMethod(method);
         conn.setConnectTimeout(10_000);
         conn.setReadTimeout(10_000);
+        // 리다이렉트를 따라가면 로그인 화면 HTML 을 200 으로 받고 등록에 성공한 줄 안다.
+        // 미인증은 미인증으로 보여야 다음 기회에 다시 시도한다.
+        conn.setInstanceFollowRedirects(false);
         conn.setRequestProperty("Content-Type", "application/json");
 
         // 네이티브 HTTP 는 웹뷰 쿠키를 모른다. 세션 쿠키를 직접 실어야 인증을 통과한다.
