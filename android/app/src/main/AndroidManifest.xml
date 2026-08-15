@@ -62,6 +62,9 @@
       선언이 있어야 한다.
     -->
     <queries>
+        <!-- 설치 여부를 getPackageInfo 로 확인한다. 이 줄이 없으면 API 30+ 에서
+             항상 "미설치" 로 보여 시청하기가 전부 스토어로 새어나간다. -->
+        <package android:name="com.plexapp.android" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" android:host="app.plex.tv" />

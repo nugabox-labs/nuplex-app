@@ -29,7 +29,55 @@ class NuplexViewController: CAPBridgeViewController {
         // 하드웨어 뒤로가기가 없다.
         webView?.allowsBackForwardNavigationGestures = true
 
+        installBridge()
         installNavigationProxy()
+    }
+
+    /**
+     window.NuplexNative 를 원격 페이지에 주입한다 (ADR-004).
+
+     두 가지를 붙인다.
+
+     - `WKUserScript` — 문서 시작 시점에 도는 스크립트. origin 과 무관하게 주입되므로
+       웹뷰가 nuplex 웹으로 넘어간 뒤에도 살아 있다. **웹의 첫 스크립트보다 먼저 돈다.**
+     - `nuplexShell` 메시지 핸들러 — 주입된 스크립트가 네이티브를 부르는 창구.
+
+     주입 원본은 `shell/public/nuplex-bridge.js` 하나이고, 빌드 → `cap sync` 를 거쳐
+     번들의 `public/` 로 들어온다. 자리표시자는 여기서 채운다 — Android 의
+     `NuplexBridgeApi.buildBridgeScript()` 와 같은 일을 한다.
+     */
+    private func installBridge() {
+        guard let controller = webView?.configuration.userContentController else {
+            NSLog("[Nuplex] userContentController 가 없어 브릿지를 붙이지 못했습니다.")
+            return
+        }
+
+        controller.removeScriptMessageHandler(forName: Self.messageHandlerName)
+        controller.add(NuplexMessageHandler(controller: self), name: Self.messageHandlerName)
+
+        guard let source = bridgeScript() else { return }
+        controller.addUserScript(
+            WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+    }
+
+    private func bridgeScript() -> String? {
+        guard let url = Bundle.main.url(
+                forResource: "nuplex-bridge", withExtension: "js", subdirectory: "public"),
+              let template = try? String(contentsOf: url, encoding: .utf8)
+        else {
+            NSLog("[Nuplex] nuplex-bridge.js 를 번들에서 읽지 못했습니다. npm run sync 를 실행하세요.")
+            return nil
+        }
+
+        let appVersion =
+            Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+            ?? "0.0.0"
+
+        return template
+            .replacingOccurrences(of: "__NUPLEX_PLATFORM__", with: "ios")
+            .replacingOccurrences(of: "__NUPLEX_APP_VERSION__", with: appVersion)
+            .replacingOccurrences(
+                of: "__NUPLEX_BRIDGE_VERSION__", with: String(NuplexBridgeAPI.bridgeVersion))
     }
 
     /**

@@ -13,7 +13,7 @@
   },
   "data": {
     "v": "1",                     // 페이로드 스키마 버전
-    "type": "notice",             // notice | new_item | available | custom
+    "type": "notice",             // notice | chat | new_item | available | custom
     "route": "/title/12345",      // 셸이 웹뷰에서 열 경로 (필수)
     "collapseKey": "notice"       // 같은 종류 알림 묶기 (선택)
   }
@@ -56,7 +56,21 @@ Android 8+ 는 채널이 필수다. 종류별로 나눠야 사용자가 "새 작
 | --- | --- | --- |
 | `new_item` | 새 작품 | 라이브러리에 작품이 추가됨 |
 | `available` | 시청 가능 | 관심 작품을 이제 볼 수 있음 |
+| `chat` | 메시지 | 채팅 (`nuplex/docs/CHAT.md`) |
 | `general` | 일반 | 공지 등 그 외 |
+
+**이 표는 발송 쪽 `nuplex/lib/push/fcm.ts` 의 `ANDROID_CHANNELS` 와 같아야 한다.**
+웹이 `android.notification.channel_id` 로 채널 id 를 실어 보내는데, 앱이 백그라운드일
+때는 시스템이 그 채널로 알림을 그린다. **셸에 없는 채널이면 Android 8+ 는 알림을
+조용히 버린다.** 발송 로그에는 성공으로 남고 사용자에게는 아무것도 안 뜬다.
+웹이 채널을 추가하면 셸도 함께 추가할 것.
+
+### 시스템이 그린 알림을 탭했을 때
+
+셸은 알림을 직접 그리지만, 앱이 백그라운드면 `onMessageReceived` 가 아예 불리지
+않아 시스템이 대신 그린다. 그때 탭하면 우리가 심은 `nuplex_route` extra 가 없다.
+FCM 이 `data` 의 키를 그대로 런처 인텐트 extra 로 실어주므로, `MainActivity` 는
+`route` extra 를 폴백으로 읽는다. 이게 없으면 그 경로로 들어온 사람은 홈으로만 간다.
 
 ## Android 알림 아이콘
 

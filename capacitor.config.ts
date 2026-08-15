@@ -15,7 +15,8 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
     iosScheme: 'https',
     // 이 목록에 없는 도메인은 웹뷰 내 이동이 차단되고 시스템 브라우저로 나간다.
-    // app.plex.tv 를 일부러 넣지 않는다 — Plex 링크는 OS 가 앱으로 인터셉트해야 한다.
+    // app.plex.tv 와 plex.nugabox.com 을 일부러 넣지 않는다 — Plex 링크는 웹뷰에
+    // 가두지 않고 OS 로 넘겨야 한다(docs/PLEX_DEEPLINK.md).
     //
     // 뒤쪽 둘은 개발용이다(10.0.2.2 는 Android 에뮬레이터에서 본 맥의 주소).
     //

@@ -40,12 +40,24 @@ interface NuplexNative {
   appVersion: string               // 예: "1.0.0"
   platform: 'ios' | 'android'
 
-  /** Plex 앱 또는 웹으로 이동. 스킴 판단과 폴백은 셸이 처리한다. */
+  /**
+   * Plex 앱 · 스토어 · 브라우저 중 한 곳으로 보낸다. 판단과 폴백은 전부 셸이 한다.
+   *
+   * **`machineIdentifier` 와 `ratingKey` 를 반드시 함께 넘길 것.** 웹이 만드는
+   * `webUrl` 은 우리 서버가 서빙하는 Plex 웹앱 주소라서 Plex 앱이 가로채지 않는다.
+   * 셸은 이 둘로 앱용 주소를 다시 만들고, `webUrl` 은 최후의 폴백으로만 쓴다.
+   *
+   * **`type` 도 함께 넘길 것.** Plex 앱의 항목 딥링크는 재생 명령이라, 재생할 파일이
+   * 없는 묶음(`show` · `season` · `collection`)을 주면 오류 팝업이 뜬다. 종류를 알면
+   * 셸이 그런 항목을 웹 폴백으로 보내 상세 화면을 띄운다. 없으면 재생 가능한 항목으로
+   * 보고 진행한다 — 구버전 웹과의 호환. 자세한 근거는 PLEX_DEEPLINK.md.
+   */
   openInPlex(params: {
-    webUrl: string                 // https://app.plex.tv/... (필수)
-    machineIdentifier?: string
-    ratingKey?: string
-  }): Promise<{ opened: 'app' | 'browser' }>
+    webUrl: string                 // 웹이 만든 주소 (필수, 폴백용)
+    machineIdentifier?: string     // 없으면 앱 딥링크를 포기한다
+    ratingKey?: string             // 없으면 앱 딥링크를 포기한다
+    type?: string                  // 'movie' | 'episode' | 'show' | 'season' | 'collection' …
+  }): Promise<{ opened: 'app' | 'browser' | 'store' }>
 
   /** 알림 권한 상태 조회 및 요청 */
   getPushPermission(): Promise<'granted' | 'denied' | 'prompt'>
@@ -154,12 +166,17 @@ const m = ua.match(/NuplexApp \((ios|android); bridge\/(\d+)\)/)
 
 셸을 만들 때 전제하는 `nuplex` 웹의 현재 동작이다.
 
-- **인증은 서명 쿠키다.** `nuplex_session`(30일) · `nuplex_profile`(1년), `httpOnly`,
-  `sameSite=lax`, 운영에서 `secure`. 셸은 토큰을 따로 보관하지 않고 웹뷰 쿠키
-  저장소를 그대로 쓴다.
-- **전 경로가 인증 게이트 뒤에 있다.** 미인증이면 `/login`, 프로필 미선택이면
-  `/profile` 로 리다이렉트된다. 셸이 푸시 라우트로 진입해도 이 리다이렉트를 거칠 수
-  있으므로, 로그인 후 원래 목적지로 돌아가는 `?next=` 처리에 의존한다.
+- **인증은 서명 쿠키다.** `nuplex_profile`(1년) · 관리자만 `nuplex_admin`(12시간),
+  `httpOnly`, `sameSite=lax`, 운영에서 `secure`. 열람용 공통 비밀번호는 없다 —
+  관문은 프로필 하나다. 셸은 토큰을 따로 보관하지 않고 웹뷰 쿠키 저장소를 그대로 쓴다.
+- **전 경로가 인증 게이트 뒤에 있다.** 프로필 쿠키가 없으면 입장 화면 `/welcome`
+  (거기서 `/profile` 로 이어짐)로 리다이렉트된다. 셸이 푸시 라우트로 진입해도 이
+  리다이렉트를 거칠 수 있으므로, 입장 후 원래 목적지로 돌아가는 `?next=` 처리에
+  의존한다.
+- **인증 없이 열리는 경로**는 `/welcome` · `/guide` · `/profile` 과 `/api/profile` ·
+  `/api/auth/logout` · `/api/app/config` · `/media/avatars` 다(`nuplex/proxy.ts`).
 - **작품 상세 경로는 `/title/<ratingKey>`** 이다.
-- **Plex 딥링크 포맷은 웹이 이미 만들고 있다** (`lib/plex/client.ts`):
-  `https://app.plex.tv/desktop/#!/server/<machineIdentifier>/details?key=<urlencoded /library/metadata/ratingKey>`
+- **Plex 링크는 웹이 만들지만 앱은 그대로 쓰지 않는다** (`lib/library.ts`):
+  `https://plex.nugabox.com/web/index.html#!/server/<machineIdentifier>/details?key=<urlencoded /library/metadata/ratingKey>`
+  우리 서버 도메인이라 Plex 앱이 가로채지 않는다. 셸이 식별자로 앱용 주소를 다시
+  만든다 — [PLEX_DEEPLINK.md](PLEX_DEEPLINK.md).

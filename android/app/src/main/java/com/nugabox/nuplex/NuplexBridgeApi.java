@@ -107,7 +107,12 @@ public class NuplexBridgeApi {
                 break;
 
             case "openInPlex":
-                openInPlex(callId, args.optString("webUrl", null));
+                openInPlex(
+                    callId,
+                    args.optString("webUrl", null),
+                    args.optString("machineIdentifier", null),
+                    args.optString("ratingKey", null),
+                    args.optString("type", null));
                 break;
 
             case "getPushPermission":
@@ -160,41 +165,143 @@ public class NuplexBridgeApi {
         }
     }
 
+    /** Plex 앱 식별자와 스토어 주소. src/config/constants.ts 의 PLEX 와 같이 고칠 것. */
+    private static final String PLEX_PACKAGE = "com.plexapp.android";
+    private static final String PLEX_STORE_MARKET = "market://details?id=com.plexapp.android";
+    private static final String PLEX_STORE_WEB =
+        "https://play.google.com/store/apps/details?id=com.plexapp.android";
+
     /**
-     * Plex 로 이동한다 (ADR-003).
+     * Plex 로 이동한다 (docs/PLEX_DEEPLINK.md).
      *
-     * https://app.plex.tv/... 링크를 그대로 넘긴다. Plex 앱이 App Links 로 가로채고,
-     * 없으면 브라우저로 간다. plex:// 커스텀 스킴은 공식 문서가 없어 쓰지 않는다.
+     * **웹이 준 webUrl 을 그대로 열지 않는다.** 웹은 이제 우리 Plex 서버가 직접 서빙하는
+     * 웹앱 주소를 만든다(plex.nugabox.com/web/index.html#!/...). 브라우저에서는 그게
+     * 맞지만 Plex 앱은 그 도메인을 자기 것으로 등록하지 않아 절대 가로채지 않는다.
+     * 앱에서는 Plex 앱으로 보내는 것이 목적이므로 machineIdentifier · ratingKey 로
+     * 주소를 다시 만든다.
      *
-     * FLAG_ACTIVITY_REQUIRE_NON_BROWSER 로 "앱이 아니면 열지 마라" 를 먼저 시도한다.
-     * 그래야 앱으로 갔는지 브라우저로 갔는지를 실제로 구분할 수 있다. 이게 없으면
-     * 안드로이드가 조용히 브라우저를 띄우고 우리는 앱이 열린 줄 안다.
+     * 사다리는 넷이다.
+     *
+     *   1. Plex 앱 미설치 → Play 스토어 (opened: "store")
+     *   2. plex://watch/video — Plex 앱이 실제로 받는 형식. 영화 · 에피소드가 바로
+     *      재생된다. 시리즈처럼 재생할 파일이 없는 종류는 여기서 건너뛴다(type 참고)
+     *   3. https://app.plex.tv/... 를 setPackage(PLEX_PACKAGE) 로 던진다. 명시적
+     *      패키지라 브라우저로 새지 않는다. 지금 Plex 는 이 링크를 등록하지 않아
+     *      항상 실패하지만, 다시 등록할 경우를 위해 남겨둔다
+     *   4. 전부 실패하면 웹이 준 주소를 브라우저로. **작품까지는 정확히 가므로 여기까지
+     *      내려와도 시청은 된다.** 이 폴백을 지우지 말 것
      */
-    private void openInPlex(int callId, String webUrl) {
-        if (webUrl == null || webUrl.isEmpty()) {
+    private void openInPlex(
+            int callId, String webUrl, String machineIdentifier, String ratingKey, String type) {
+        if (!isPlexInstalled()) {
+            if (startViewIntent(PLEX_STORE_MARKET, null) || startViewIntent(PLEX_STORE_WEB, null)) {
+                resolve(callId, "{\"opened\":\"store\"}");
+                return;
+            }
+            openExternal(webUrl);
             resolve(callId, "{\"opened\":\"browser\"}");
             return;
         }
 
-        // TODO(verify): plex:// 커스텀 스킴은 공식 문서가 없어 형식을 확인하기 전에는
-        // 구현하지 않는다. 확인 절차는 docs/PLEX_DEEPLINK.md 참고.
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            try {
-                Intent appOnly = new Intent(Intent.ACTION_VIEW, Uri.parse(webUrl));
-                appOnly.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                appOnly.addFlags(Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER);
-                activity.startActivity(appOnly);
+        for (String candidate : deepLinkLadder(machineIdentifier, ratingKey, type)) {
+            if (startViewIntent(candidate, PLEX_PACKAGE)) {
+                // Plex 가 "그 작품"을 못 찾을 때 원인이 우리가 넘긴 값인지 Plex 쪽인지
+                // 가르려면 실제로 던진 주소가 필요하다. 시스템 로그는 이 값을 줄인다.
+                Log.i(TAG, "Plex 앱으로 보냅니다: " + candidate);
                 resolve(callId, "{\"opened\":\"app\"}");
                 return;
-            } catch (Exception e) {
-                // 앱이 없거나 링크를 자기 것으로 등록하지 않았다. 브라우저로 간다.
-                Log.i(TAG, "Plex 앱으로 열지 못해 브라우저로 넘깁니다.");
             }
         }
 
+        Log.i(TAG, "Plex 앱이 링크를 받지 않아 브라우저로 넘깁니다.");
         openExternal(webUrl);
         resolve(callId, "{\"opened\":\"browser\"}");
+    }
+
+    /** 재생할 파일을 직접 갖지 않는 묶음인가. 알 수 없으면(null) 재생 가능으로 본다. */
+    private boolean isContainer(String type) {
+        if (type == null || type.isEmpty()) return false;
+        switch (type) {
+            case "show": case "season": case "collection": case "artist": case "album":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Plex 앱이 깔려 있는가.
+     *
+     * AndroidManifest 의 &lt;queries&gt; 에 com.plexapp.android 가 선언돼 있어야 한다.
+     * 빠지면 API 30+ 에서 항상 NameNotFoundException 이 나 전부 스토어로 간다.
+     */
+    private boolean isPlexInstalled() {
+        try {
+            activity.getPackageManager().getPackageInfo(PLEX_PACKAGE, 0);
+            return true;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+
+    /**
+     * 앱으로 보낼 후보 주소를 순서대로 만든다. 식별자가 없으면 만들 수 없다.
+     *
+     * 1순위 `plex://watch/video?uri=…` 는 **Plex 앱 APK 에서 직접 확인한 형식**이다
+     * (2026.15.0). 등록된 딥링크 문자열이 두 개뿐이고, 그중 항목을 받는 것은 이것이다.
+     * `uri` 값의 형식도 앱 안의 파서 정규식 그대로다 — docs/PLEX_DEEPLINK.md.
+     * 에뮬레이터에서 실제로 그 작품이 재생되는 것까지 확인했다.
+     *
+     * 2순위 app.plex.tv 는 **Plex 앱이 등록하지 않는다**(매니페스트 확인). 남겨둔 것은
+     * Plex 가 다시 등록할 경우를 위한 자리이고, 지금은 항상 실패한다. 비용은 예외 하나다.
+     */
+    private java.util.List<String> deepLinkLadder(
+            String machineIdentifier, String ratingKey, String type) {
+        java.util.List<String> urls = new java.util.ArrayList<>();
+        if (machineIdentifier == null || machineIdentifier.isEmpty()) return urls;
+        if (ratingKey == null || ratingKey.isEmpty()) return urls;
+        // 재생할 파일이 없는 묶음이다. 재생 명령을 보내면 Plex 가 "Item not known" 으로
+        // 실패한다 — 상세 화면을 띄우도록 웹 폴백으로 내려보낸다.
+        if (isContainer(type)) {
+            Log.i(TAG, "재생 대상이 아닌 종류(" + type + ")라 웹으로 보냅니다.");
+            return urls;
+        }
+
+        String metadataKey = "/library/metadata/" + ratingKey;
+        String encodedKey;
+        String encodedUri;
+        try {
+            encodedKey = java.net.URLEncoder.encode(metadataKey, "UTF-8");
+            encodedUri = java.net.URLEncoder.encode(
+                "server://" + machineIdentifier + "/com.plexapp.plugins.library" + metadataKey,
+                "UTF-8");
+        } catch (Exception e) {
+            return urls;
+        }
+
+        urls.add("plex://watch/video?uri=" + encodedUri);
+        urls.add("https://app.plex.tv/desktop/#!/server/" + machineIdentifier
+            + "/details?key=" + encodedKey);
+        return urls;
+    }
+
+    /**
+     * ACTION_VIEW 를 던진다. 받아줄 곳이 없으면 false — 예외를 밖으로 내보내지 않는다.
+     *
+     * @param pkg null 이 아니면 그 패키지만 받게 한다. 브라우저로 새는 것을 막고,
+     *            앱으로 갔는지를 실제로 구분할 수 있게 해준다.
+     */
+    private boolean startViewIntent(String url, String pkg) {
+        if (url == null || url.isEmpty()) return false;
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (pkg != null) intent.setPackage(pkg);
+            activity.startActivity(intent);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**

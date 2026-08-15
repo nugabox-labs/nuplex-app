@@ -31,7 +31,12 @@ enum NuplexBridgeAPI {
             respond(nil)
 
         case "openInPlex":
-            openInPlex(webUrl: args["webUrl"] as? String, respond: respond)
+            openInPlex(
+                webUrl: args["webUrl"] as? String,
+                machineIdentifier: args["machineIdentifier"] as? String,
+                ratingKey: args["ratingKey"] as? String,
+                type: args["type"] as? String,
+                respond: respond)
 
         case "getPushPermission":
             NuplexPush.permissionState { respond($0) }
@@ -79,42 +84,148 @@ enum NuplexBridgeAPI {
         }
     }
 
+    /// Plex 앱의 App Store 주소. src/config/constants.ts 의 PLEX 와 같이 고칠 것.
+    private static let plexStoreURL = "https://apps.apple.com/app/plex/id383457673"
+
     /**
-     Plex 로 이동한다 (ADR-003).
+     Plex 로 이동한다 (ADR-003 개정, docs/PLEX_DEEPLINK.md).
 
-     `https://app.plex.tv/...` 링크를 그대로 OS 에 넘긴다. Plex 앱이 설치돼 있으면
-     Universal Links 로 가로채고, 없으면 브라우저로 간다. `plex://` 커스텀 스킴은
-     Plex 가 공식 문서화한 적이 없어 기본 경로로 쓰지 않는다.
+     **웹이 준 `webUrl` 을 그대로 열지 않는다.** 웹은 이제 우리 Plex 서버가 직접
+     서빙하는 웹앱 주소를 만든다(`plex.nugabox.com/web/index.html#!/...`). 브라우저에서는
+     그게 맞지만 Plex 앱은 그 도메인을 자기 것으로 등록하지 않아 절대 가로채지 않는다.
+     앱에서는 Plex 앱으로 보내는 것이 목적이므로 `machineIdentifier` · `ratingKey` 로
+     주소를 다시 만든다.
 
-     `universalLinksOnly` 덕분에 앱으로 갔는지 브라우저로 갔는지를 실제로 구분할 수
-     있다. 웹이 "Plex 앱에서 열림" 같은 안내를 정확히 띄울 수 있는 근거가 된다.
+     사다리는 넷이다.
+
+     1. Plex 앱 미설치 → App Store. (`opened: "store"`)
+     2. `plex://watch/video` — Plex 앱이 실제로 받는 형식. 영화 · 에피소드가 바로
+        재생된다. 시리즈처럼 재생할 파일이 없는 종류는 건너뛴다(`type` 참고).
+     3. `https://app.plex.tv/...` 를 `universalLinksOnly` 로 연다. 지금 Plex 는 이
+        링크를 등록하지 않지만, 다시 등록할 경우를 위해 남겨둔다.
+     4. 전부 실패하면 웹이 준 주소를 브라우저로 연다. **작품까지는 정확히 가므로
+        여기까지 내려와도 시청은 된다.** 이 폴백을 지우지 말 것.
      */
-    private static func openInPlex(webUrl: String?, respond: @escaping (Any?) -> Void) {
-        guard let webUrl, let url = URL(string: webUrl) else {
-            respond(["opened": "browser"])
-            return
-        }
-
-        // TODO(verify): plex:// 커스텀 스킴은 Plex 가 공식 문서화한 적이 없어
-        // 파라미터 형식을 확인하기 전에는 구현하지 않는다. 확인 절차와 붙일 위치는
-        // docs/PLEX_DEEPLINK.md 에 적어두었다. 원격 설정의
-        // features.plexCustomScheme 이 그 실험을 켜는 스위치가 될 자리다.
-
+    private static func openInPlex(
+        webUrl: String?,
+        machineIdentifier: String?,
+        ratingKey: String?,
+        type: String?,
+        respond: @escaping (Any?) -> Void
+    ) {
         DispatchQueue.main.async {
             let app = UIApplication.shared
+            let fallback = webUrl.flatMap { URL(string: $0) }
 
-            // 1순위: Plex 앱이 이 링크를 자기 것으로 등록했을 때만 열린다.
-            app.open(url, options: [.universalLinksOnly: true]) { openedInApp in
-                if openedInApp {
-                    respond(["opened": "app"])
+            // 스킴 조회는 Info.plist 의 LSApplicationQueriesSchemes 에 plex 가
+            // 선언돼 있어야 동작한다. 빠지면 항상 false 가 되어 전부 스토어로 간다.
+            let installed = URL(string: "plex://").map { app.canOpenURL($0) } ?? false
+
+            if !installed {
+                if let store = URL(string: plexStoreURL) {
+                    app.open(store, options: [:]) { ok in
+                        if ok { respond(["opened": "store"]) }
+                        else { openFallback(fallback, app: app, respond: respond) }
+                    }
                     return
                 }
-                // 2순위: 브라우저. 앱 미설치이거나 사용자가 Universal Links 를 꺼둔 경우다.
-                app.open(url, options: [:]) { _ in
-                    respond(["opened": "browser"])
+                openFallback(fallback, app: app, respond: respond)
+                return
+            }
+
+            let ladder = deepLinkLadder(
+                machineIdentifier: machineIdentifier, ratingKey: ratingKey, type: type)
+            attempt(ladder, index: 0, app: app) { openedInApp in
+                if openedInApp {
+                    respond(["opened": "app"])
+                } else {
+                    NSLog("[Nuplex] Plex 앱이 링크를 받지 않아 브라우저로 넘깁니다.")
+                    openFallback(fallback, app: app, respond: respond)
                 }
             }
         }
+    }
+
+    /**
+     앱으로 보낼 후보 주소를 순서대로 만든다. 식별자가 없으면 만들 수 없다.
+
+     1순위 `plex://watch/video?uri=…` 는 **Plex 앱 APK 에서 직접 확인한 형식**이다
+     (Android 2026.15.0). 등록된 딥링크 문자열이 두 개뿐이고 그중 항목을 받는 것이
+     이것이며, `uri` 값의 형식도 앱 안의 파서 정규식 그대로다. Android 에서는 그
+     작품이 실제로 재생되는 것까지 확인했다 — docs/PLEX_DEEPLINK.md.
+
+     **iOS 는 아직 실기기 확인 전이다.** 스킴은 두 플랫폼이 공유하는 것이 보통이라
+     같은 순서로 둔다. 2순위 app.plex.tv 는 Android 에서 Plex 가 등록하지 않는 것을
+     확인했고, iOS 에서도 기대하지 않는다. 남겨둔 것은 자리 표시에 가깝다.
+     */
+    private static func deepLinkLadder(
+        machineIdentifier: String?, ratingKey: String?, type: String?
+    ) -> [URL] {
+        guard let mid = machineIdentifier, !mid.isEmpty,
+              let key = ratingKey, !key.isEmpty else { return [] }
+
+        // 재생할 파일이 없는 묶음이다. 재생 명령을 보내면 Plex 가 "Item not known" 으로
+        // 실패한다 — 상세 화면을 띄우도록 웹 폴백으로 내려보낸다.
+        if let type, ["show", "season", "collection", "artist", "album"].contains(type) {
+            NSLog("[Nuplex] 재생 대상이 아닌 종류(\(type))라 웹으로 보냅니다.")
+            return []
+        }
+
+        let metadataKey = "/library/metadata/\(key)"
+        let encodedKey = metadataKey.addingPercentEncoding(
+            withAllowedCharacters: .alphanumerics) ?? metadataKey
+        let sourceUri = "server://\(mid)/com.plexapp.plugins.library\(metadataKey)"
+        let encodedUri = sourceUri.addingPercentEncoding(
+            withAllowedCharacters: .alphanumerics) ?? sourceUri
+
+        var urls: [URL] = []
+        if let scheme = URL(string: "plex://watch/video?uri=\(encodedUri)") {
+            urls.append(scheme)
+        }
+        if let ul = URL(string: "https://app.plex.tv/desktop/#!/server/\(mid)/details?key=\(encodedKey)") {
+            urls.append(ul)
+        }
+        return urls
+    }
+
+    /// 후보를 하나씩 시도한다. https 는 앱이 등록한 경우에만 열리게 막는다.
+    private static func attempt(
+        _ urls: [URL],
+        index: Int,
+        app: UIApplication,
+        done: @escaping (Bool) -> Void
+    ) {
+        guard index < urls.count else { done(false); return }
+        let url = urls[index]
+
+        if url.scheme != "https" && !app.canOpenURL(url) {
+            attempt(urls, index: index + 1, app: app, done: done)
+            return
+        }
+
+        let options: [UIApplication.OpenExternalURLOptionsKey: Any] =
+            url.scheme == "https" ? [.universalLinksOnly: true] : [:]
+
+        app.open(url, options: options) { opened in
+            if opened {
+                NSLog("[Nuplex] Plex 앱으로 보냅니다: \(url.absoluteString)")
+                done(true)
+            }
+            else { attempt(urls, index: index + 1, app: app, done: done) }
+        }
+    }
+
+    /// 마지막 폴백 — 웹이 준 주소를 브라우저로 연다.
+    private static func openFallback(
+        _ url: URL?,
+        app: UIApplication,
+        respond: @escaping (Any?) -> Void
+    ) {
+        guard let url else {
+            respond(["opened": "browser"])
+            return
+        }
+        app.open(url, options: [:]) { _ in respond(["opened": "browser"]) }
     }
 
     private static func openExternal(_ urlString: String?) {

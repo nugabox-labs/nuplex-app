@@ -27,6 +27,11 @@ public class NuplexPush {
     enum Channel {
         NEW_ITEM("new_item", "새 작품"),
         AVAILABLE("available", "시청 가능"),
+        // 웹이 android.notification.channel_id 로 "chat" 을 실어 보낸다
+        // (nuplex/lib/push/fcm.ts 의 ANDROID_CHANNELS). 앱이 백그라운드일 때는
+        // 시스템이 그 채널로 알림을 그리는데, 없는 채널이면 Android 8+ 가 알림을
+        // 조용히 버린다. 여기에 없으면 채팅 푸시가 아예 안 뜬다.
+        CHAT("chat", "메시지"),
         GENERAL("general", "일반");
 
         final String id;

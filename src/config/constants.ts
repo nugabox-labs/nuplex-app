@@ -29,6 +29,24 @@ export const REMOTE_CONFIG_TIMEOUT_MS = 5_000;
 /** 브릿지 계약 버전 (§5.1). 새 메서드를 추가할 때만 올린다. */
 export const BRIDGE_VERSION = 1;
 
+/**
+ * Plex 앱 식별자와 스토어 주소.
+ *
+ * 셸이 "시청하기" 를 받으면 웹이 준 주소를 그냥 열지 않는다. 웹이 만드는 주소는
+ * 이제 우리 Plex 서버가 직접 서빙하는 웹앱(`plex.nugabox.com/web/index.html#!/...`)
+ * 이라서 Plex 앱이 자기 것으로 가로채지 않는다. 앱에서는 Plex 앱으로 보내야 하므로
+ * 셸이 machineIdentifier · ratingKey 로 주소를 다시 만든다.
+ * 자세한 사다리는 docs/PLEX_DEEPLINK.md.
+ *
+ * **네이티브에도 같은 값이 하드코딩돼 있다.** 여기를 고치면 두 곳을 함께 고칠 것 —
+ * NuplexBridgeAPI.swift · NuplexBridgeApi.java.
+ */
+export const PLEX = {
+  androidPackage: 'com.plexapp.android',
+  iosStoreUrl: 'https://apps.apple.com/app/plex/id383457673',
+  androidStoreUrl: 'https://play.google.com/store/apps/details?id=com.plexapp.android',
+} as const;
+
 /** Preferences 저장 키. */
 export const STORAGE_KEYS = {
   remoteConfigCache: 'nuplex.remoteConfig.v1',

@@ -122,10 +122,18 @@ public class MainActivity extends BridgeActivity {
     private void handleRouteIntent(Intent intent) {
         if (intent == null) return;
         String route = intent.getStringExtra(EXTRA_ROUTE);
-        if (route == null) return;
+
+        // 우리가 그린 알림이 아니라 시스템 트레이가 그린 알림을 탭한 경우다.
+        // 웹이 payload 에 notification 블록을 함께 보내므로, 앱이 백그라운드일 때는
+        // onMessageReceived 가 아예 불리지 않고 시스템이 직접 알림을 그린다. 그때
+        // FCM 은 data 의 키를 그대로 런처 인텐트의 extra 로 실어준다.
+        // 이 폴백이 없으면 그 경로로 들어온 사람은 전부 홈으로만 간다.
+        if (route == null) route = intent.getStringExtra("route");
+        if (route == null || route.isEmpty()) return;
 
         // 같은 알림을 두 번 처리하지 않도록 꺼내면서 지운다.
         intent.removeExtra(EXTRA_ROUTE);
+        intent.removeExtra("route");
         NuplexRouteQueue.offer(route, getBridge().getWebView(), NuplexPreferences.webBaseUrl(this));
     }
 }
