@@ -22,6 +22,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         } else {
             NSLog("[Nuplex] GoogleService-Info.plist 가 없어 푸시를 비활성합니다 (docs/FIREBASE_SETUP.md).")
         }
+
+        // 주의: 이 델리게이트는 곧 Capacitor 의 SceneDelegateProxy 에 덮인다.
+        // SceneDelegate.scene(_:willConnectTo:) 가 다시 가져온다 — 거기 주석 참고.
         return true
     }
 
@@ -112,14 +115,12 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     /**
      알림 라우팅을 받을 화면.
 
-     **keyWindow 를 뒤지지 않는다.** Capacitor 의 SceneDelegateProxy 가 자체 window 를
-     올리면 `keyWindow?.rootViewController` 가 `CAPBridgeViewController` 가 되어
-     `as? NuplexViewController` 캐스팅이 실패한다. 그러면 옵셔널 체이닝이 조용히
-     끝나면서 **알림을 눌러도 아무 일이 없다** — 실제로 그렇게 깨져 있었다
-     (`docs/plan/active/phase-8-store-release.md` A-0-1).
-
-     푸시 토큰 등록이 이미 쓰고 있는 `NuplexViewController.current` 가 정답이다.
+     푸시 토큰 등록이 이미 쓰고 있는 `NuplexViewController.current` 를 그대로 쓴다.
      화면이 하나뿐인 앱이라 마지막으로 만들어진 것이 곧 현재 화면이다.
+
+     예전에는 `keyWindow?.rootViewController` 를 `NuplexViewController` 로 캐스팅해
+     찾았다. 창 구성이 바뀌면 조용히 nil 이 되는 방식이라 같은 값을 두 군데서 다르게
+     구하지 않도록 통일했다.
      */
     private func rootViewController() -> NuplexViewController? {
         NuplexViewController.current
