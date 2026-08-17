@@ -64,8 +64,33 @@
 `1.0.0 (1)` 이 TestFlight 내부 테스트(`Internal` 그룹)에 올라가 있으니 그걸로 확인한다.
 
 - [ ] ★ 영화 상세 → "Plex에서 시청하기" → Plex 앱에서 **그 작품**이 열린다
+      - **실패 (2026-08-17, TestFlight `1.0.0 (1)`, 실기기).**
+        Plex 앱으로 안 가고 **브라우저가 열린다**
+      - 코드상 이 증상은 `canOpenURL("plex://…")` 이 false 를 돌려준 경우다.
+        false 면 조용히 2순위로 넘어가는데, 2순위 `app.plex.tv` 는 Plex 가 등록하지 않는
+        호스트라(Phase 7 에서 Android APK 로 확인) `universalLinksOnly` 가 걸러내고
+        곧장 웹 폴백으로 떨어진다
+      - `LSApplicationQueriesSchemes` 에 `plex` 는 선언돼 있다(빠지면 항상 "미설치" 판정)
+      - **다음 단계**: 아래 §4-1 로 스킴 등록 여부부터 가른다
 - [ ] ★ 시리즈 → 웹 폴백(Plex Web 상세)
 - [ ] ★ Plex 미설치 → App Store 의 Plex 페이지
+
+### 4-1. iOS 스킴을 빌드 없이 확인하는 법
+
+Android 는 APK 를 뜯어 등록된 딥링크를 직접 봤다(`docs/PLEX_DEEPLINK.md`).
+iOS 는 그럴 수 없으니 **기기 Safari 주소창**으로 가른다. 스킴이 등록돼 있으면
+iOS 가 "Plex 앱에서 여시겠습니까?" 를 띄운다.
+
+| 넣어 볼 것 | 무엇을 가르는가 |
+| --- | --- |
+| `plex://` | 커스텀 스킴이 등록돼 있는가 |
+| `plex://watch/video?uri=server%3A%2F%2F<mid>%2Fcom%2Eplexapp%2Eplugins%2Elibrary%2Flibrary%2Fmetadata%2F<key>` | 앱이 실제로 만드는 주소가 통하는가 |
+| 같은 주소에서 `.` 을 인코딩하지 않은 것 | `%2E` 인코딩이 문제인가 |
+| `https://watch.plex.tv/` | Universal Link 가 사는가 |
+
+셸 로그는 **Xcode 없이도** 본다 — 기기를 USB 로 꽂고 macOS `Console.app` 에서
+기기를 고른 뒤 `Nuplex` 로 거른다. `Plex 앱으로 보냅니다` 와
+`Plex 앱이 링크를 받지 않아 브라우저로 넘깁니다` 중 어느 쪽인지가 바로 보인다.
 
 > 스킴 형식(`plex://watch/video?uri=server://…`)은 **Android APK 에서 뽑은 근거**다.
 > iOS 는 미검증 — 안 되면 iOS Plex 의 URL types 를 확인한다(`docs/PLEX_DEEPLINK.md`).
