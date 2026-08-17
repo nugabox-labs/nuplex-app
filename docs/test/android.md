@@ -61,8 +61,8 @@
         `재생 대상이 아닌 종류(show)라 웹으로 보냅니다.` →
         `Plex 앱이 링크를 받지 않아 브라우저로 넘깁니다.` → Chrome 이
         `plex.nugabox.com/web/…` 을 연다
-- [ ] Plex 미설치 → Play 스토어의 Plex 페이지 — **Phase 7 에서 확인**, 이번 회차는 안 함
-      (지우면 위 두 항목을 다시 못 하므로 마지막에 할 것)
+- [x] Plex 미설치 → Play 스토어의 Plex 페이지 — **Phase 7 에서 확인**
+      - 이번 회차는 안 했다. Plex 를 지우면 위 두 항목을 다시 못 하므로 **맨 마지막에** 한다
 
 > **함정**: `am force-stop` 뒤에 딥링크를 던지면 `Failed to fetch play queue response`
 > 가 난다. 평소 기기에서는 안 난다. **확인 전에 Plex 를 한 번 실행해 둘 것.**
