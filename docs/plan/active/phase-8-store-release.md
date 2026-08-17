@@ -84,9 +84,11 @@ Desktop 이 1·2 를 고쳤다.** [Code] 는 같은 파일을 다시 건드리�
      · 앱이 떠 있으면 `NotificationRouter` 가 표시 옵션 0 으로 답해 배너 자체가 안 뜬다
    - 조치: 프록시 호출 **뒤에** 델리게이트를 도로 가져온다. 셸은 Capacitor 푸시
      플러그인을 쓰지 않고 알림을 네이티브에서 직접 처리하므로 잃는 것이 없다
-   - 검증: 포그라운드 푸시에서 시스템 로그의 `shouldPresentAlert` 가
-     **NO → YES** 로 바뀌는 것을 확인했다(`Received response 0` 도 사라짐).
-     **알림 탭 라우팅은 확인 대기** — 사람이 눌러 줘야 한다
+   - 검증 둘 다 통과 —
+     · 포그라운드 푸시에서 시스템 로그의 `shouldPresentAlert` 가 **NO → YES**
+       (`Received response 0` 도 사라짐)
+     · 백그라운드 알림 탭 → `[Nuplex] 푸시 라우트로 이동: …/title/88793` 로그와
+       실제 화면 이동 확인
    - **찾는 데 오래 걸린 이유를 남긴다.** 처음엔 `rootViewController()` 가 nil 이라
      조용히 끝나는 것으로 진단했는데 **틀렸다.** 진단용 로그를 넣어 보니 핸들러
      자체가 안 불렸다. Firebase 스위즐링도 의심해 `FirebaseAppDelegateProxyEnabled`
@@ -96,27 +98,21 @@ Desktop 이 1·2 를 고쳤다.** [Code] 는 같은 파일을 다시 건드리�
    - 곁가지로 `rootViewController()` 를 `NuplexViewController.current` 로 통일하고
      못 찾을 때 로그를 남기게 했다(커밋 `1510984`). 조용한 실패를 없애기 위함이다
 
-2. **웹 헤더 안전영역** — `nuplex` 저장소 `components/navbar.tsx:83`.
-   **Desktop 이 고쳤다. 아직 배포하지 않았다** — 웹 `main` 푸시는 곧 운영 배포라
-   사람의 확인을 기다린다(`CLAUDE.md` §4). 작업 트리에만 있다.
+2. **웹 안전영역** — `nuplex` 저장소. **Desktop 이 고치고 배포까지 했다**
+   (웹 커밋 `ff4580e` 헤더, `81511bb` 모달).
    - 근거(추측 아님): 배포된 HTML 은 `viewport-fit=cover` 를 켜 두었는데
      **배포된 CSS 번들 55,951바이트 안에 `safe-area-inset` 이 0회**였다.
      `app/layout.tsx:52` 주석이 "이걸 켰으면 `env(safe-area-inset-*)` 로 여백을 줘야
      한다" 고 스스로 적어 두고 지키지 않은 상태였다
-   - 변경: `<header>` 에 `pt-[env(safe-area-inset-top)]` 한 줄. `next build` 후
-     번들에 `padding-top:env(safe-area-inset-top)` 이 실제로 들어간 것을 확인했다
-   - **시뮬레이터 육안 확인은 못 했다** — 배포해야 앱 웹뷰에 반영된다. 미검증
-   - 원래 계획(그대로 유효):
-   - 구체적으로: `<header>` 에 `pt-[env(safe-area-inset-top)]` 를 주고, 높이는 지금의
-     `h-16`(64px)을 안쪽 행에 그대로 두어 **총 높이가 inset + 64px** 가 되게 한다.
-     배경 그라디언트(`:89` 의 `h-[130%]`)도 그 늘어난 높이를 덮어야 한다
-   - iPhone 17(다이나믹 아일랜드)에서 inset 은 **59pt**, 노치 세대는 47pt, 홈버튼
-     세대는 20pt 다. **고정값을 박지 말고 `env()` 를 쓴다** — 기기마다 다르다
-   - 하단은 `env(safe-area-inset-bottom)`(홈 인디케이터 34pt). 지금 홈 화면은 스크롤
-     콘텐츠뿐이라 문제가 없지만 **고정 하단 바가 있는 화면(채팅 입력창)은 확인이 필요하다.**
-     헤더 버튼이 안 눌려 그 화면에 들어가지 못했다 — 미검증
-   - 셸 자체 화면(`shell/public/styles/shell.css:33`)이 이미 같은 방식으로 처리하고 있으니
-     그쪽을 참고하면 된다. 뷰포트는 이미 `viewport-fit=cover` 라 웹만 고치면 된다
+   - 변경 둘 —
+     · `components/navbar.tsx` `<header>` 에 `pt-[env(safe-area-inset-top)]`.
+       안쪽 `h-16`(64px) 행은 그대로라 총 높이가 `inset + 64px` 가 된다.
+       배경 그라디언트가 `h-[130%]` 라 늘어난 높이를 그대로 덮는다
+     · `chat-panel` · `notice-bell` · `home-order-modal` 세 모달의
+       `fixed inset-0 … p-4` 에 위아래 안전영역 여백. 셋이 같은 클래스 문자열을 쓴다
+   - **고정값을 박지 않았다.** iPhone 17(다이나믹 아일랜드) 59pt · 노치 세대 47pt ·
+     홈버튼 세대 20pt 로 기기마다 다르다. 브라우저에서는 inset 이 0 이라 변화 없다
+   - 배포 후 시뮬레이터에서 눈으로 확인했다(위 체크 항목)
 
 3. **[Code] 웹 이동 실패가 오프라인 화면으로 안 간다(의심)** — 재현: `VITE_WEB_BASE_URL`
    을 닿지 않는 주소로 주고 실행(`https://localhost:9`, `allowNavigation` 에 있는 호스트).
