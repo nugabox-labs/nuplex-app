@@ -7,8 +7,9 @@
 
 ## 0. 지금 상태 한 줄
 
-코드는 양 플랫폼 다 빌드되고 **Android 는 에뮬레이터에서 전 기능 검증됨**(Phase 7).
-**iOS 는 상호작용 미검증**이고, 스토어 계정·인증서·앱 등록이 아직 없다.
+**iOS `1.0.0 (1)` 이 TestFlight 에서 테스트 준비 완료**(2026-08-17). 시뮬레이터 검증은
+푸시 라우팅·안전영역까지 전부 통과했고, **남은 것은 실기기에서의 Plex 딥링크**다.
+Android 는 에뮬레이터에서 Plex 재생까지 확인됐다. 플랫폼별 결과는 `docs/test/`.
 
 ## A. iOS 검증 — 막혀 있던 것 [Desktop]
 
@@ -197,14 +198,23 @@ Desktop 이 1·2 를 고쳤다.** [Code] 는 같은 파일을 다시 건드리�
         에 넣어 뒀다 — **Xcode > Window > Organizer 에서 바로 Distribute App 이 된다**
       - `ITSAppUsesNonExemptEncryption = false` 를 Info.plist 에 선언했다.
         없으면 올릴 때마다 수출 규정 답변을 기다리며 빌드가 멈춘다
-- [ ] [사람] TestFlight 업로드
-      - 업로드에는 App Store Connect API 키나 앱 암호가 필요하다 —
-        **자격증명이라 에이전트가 하지 않는다.** Organizer 에서 올리면 된다
+- [x] [Desktop] TestFlight 업로드 완료 (2026-08-17 21:12)
+      - **자격증명 없이 올리는 길이 있다.** `exportOptions.plist` 에
+        `destination: upload` 을 넣고 `xcodebuild -exportArchive` 를 돌리면
+        **Xcode 에 로그인된 세션**으로 업로드한다. Organizer 의 Distribute App 과 같은 경로다.
+        `altool` 은 API 키나 앱 암호를 따로 요구하지만 이쪽은 필요 없다
       - 이 맥에는 API 키(`~/.appstoreconnect/private_keys/`)도 Transporter 도 없다
 - [ ] [Code] 태그 `v1.0.0` 푸시 → `ios-release.yml` 이 TestFlight 업로드 (CI 경로)
-- [ ] [Desktop] App Store Connect → TestFlight 에서 빌드 처리 완료 확인
+- [x] [Desktop] App Store Connect → TestFlight 에서 빌드 처리 완료 확인
+      - `1.0.0 (1)` — 처리 중 → **테스트 준비 완료**, 90일 후 만료
 - [x] [Desktop] 수출 규정(Export Compliance) — Info.plist 에 면제 선언을 박아 해결
-- [ ] [Desktop] 내부 테스터 초대 → 실기기 설치 → §A 확인 목록 재확인
+      - 업로드 뒤 대기 없이 바로 `테스트 준비 완료` 로 넘어간 것으로 확인
+- [x] [Desktop] 내부 테스터 초대
+      - 내부 그룹 `Internal` 생성(자동 배포 켬 — 이후 빌드도 자동으로 간다)
+      - `root@nugabox.com`(JangNuga, 계정 소유자) 추가 → 상태 `초대됨`
+      - **내부 테스트는 Beta App Review 를 거치지 않는다.** 초대 메일의 링크로 바로 설치된다
+- [ ] [사람] 실기기 설치 → `docs/test/ios.md` 의 ★ 항목 확인
+      - 특히 **Plex 딥링크**. 스킴은 Android APK 근거라 iOS 는 형식이 다를 수 있다
 - [ ] [Desktop] Play Console 내부 테스트 트랙에 AAB 올라갔는지 확인
 
 ## E. 심사 제출 [Desktop]
