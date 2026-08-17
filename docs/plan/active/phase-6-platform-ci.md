@@ -1,6 +1,7 @@
 # Phase 6 — 플랫폼 마감 및 CI
 
-- 상태: 진행 중 (2026-08-13). 코드는 대부분 끝났고 **검증과 사람 작업**이 남았다
+- 상태: 진행 중 (2026-08-13, 2026-08-17 갱신). 코드는 끝났고 **검증과 사람 작업**이 남았다
+- 스토어 등록·TestFlight·심사는 `phase-8-store-release.md` 로 옮겼다
 
 ## 끝난 것
 
@@ -27,8 +28,11 @@
 | 양 플랫폼 빌드 | 통과 |
 | Android 뒤로가기 | **미검증** — 에뮬레이터가 ANR(리소스 압박)로 입력을 못 받았다. 실기기 필요 |
 | 엣지 투 엣지 표시 | **미검증** — 위와 같은 이유 |
-| iOS 오프라인 폴백 | **미검증** — 시뮬레이터에 탭 자동화 수단이 없어 온보딩을 넘기지 못했다. Android 쪽 같은 로직은 검증됨 |
-| CI 워크플로 | **미실행** — 저장소를 GitHub 에 올려야 돌아간다 |
+| iOS 오프라인 폴백 | **미검증** — Claude Code 는 시뮬레이터를 탭할 수 없다(CLAUDE.md §2.1). Desktop 이 이어받는다 |
+| iOS 브릿지 주입 | 통과 — Phase 7 에서 **주입 코드가 아예 없던 것**을 발견해 구현·확인 |
+| Android 푸시 전 경로 | 통과 — 실제 FCM 발송으로 콜드 스타트 라우팅까지 (Phase 7) |
+| Android Plex 딥링크 | 통과 — Plex 앱에서 해당 작품 재생까지 (Phase 7) |
+| CI 워크플로 | 실행됨 (2026-08-16 첫 푸시). 셸·Android 통과, **iOS 잡 실패 → 수정함** |
 
 ### 아이콘 · 스플래시
 - [x] 웹 워드마크(Inter Black, `NU` #f5f5f5 + `PLEX` #e5a00d, 배경 #0f0f0f)를 그대로
@@ -38,15 +42,15 @@
       (글자 폭 597 / 허용 665) 마스크를 씌워 확인했다
 - [x] `@capacitor/assets` 로 양 플랫폼 생성 (android 136 · ios 13개)
 
-## 남은 것 — 사람이 해야 하는 작업
-- [ ] App Store Connect / Play Console 에 앱 등록 (서비스 계정 업로드는 앱이 한 번
-      등록된 뒤에만 동작한다)
-- [ ] 업로드 키스토어 · 배포 인증서 생성 → GitHub Secrets 등록
-      (필요한 이름은 각 워크플로 상단 주석 참고)
-- [ ] `exportOptions.plist` 추가 후 ios-release 의 IPA 내보내기·업로드 주석 해제
+## CI 첫 실행에서 드러난 것
 
-## 남은 것 — 코드
+iOS 잡이 `GoogleService-Info.plist` 부재로 실패했다(exit 65,
+"Build input file cannot be found"). 시크릿이라 커밋하지 않는데 Xcode 프로젝트는
+참조하고 있어서다. 로컬에서 그대로 재현한 뒤, 시크릿이 없으면 자리표시자를 만들도록
+`ci.yml` 을 고쳤다 — 이 잡이 보는 것은 컴파일 오류뿐이라 진짜 값이 필요 없다.
+릴리스 빌드는 `ios-release.yml` 이 진짜 값을 넣는다.
 
-- [ ] App Links 검증용 `assetlinks.json` — 업로드 키의 SHA-256 지문이 필요해서
-      키 생성 전에는 만들 수 없다. nuplex 웹의 `/.well-known/` 에 배포한다
-- [ ] 실기기 확인 목록 전체 (docs/RELEASE.md)
+## 남은 것
+
+스토어 등록 · 인증서 · `exportOptions.plist` · `assetlinks.json` · 실기기 확인은
+전부 **`phase-8-store-release.md`** 에 소유자를 붙여 옮겼다. 여기서는 관리하지 않는다.

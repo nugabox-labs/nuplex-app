@@ -62,6 +62,37 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run cap -- sync ios
+
+      # GoogleService-Info.plist 는 시크릿이라 커밋하지 않는데(.gitignore) Xcode 프로젝트가
+      # 참조한다. 파일이 없으면 컴파일 전에 통째로 실패한다 —
+      # "Build input file cannot be found" (exit 65). 실제로 이걸로 CI 가 빨갛게 됐다.
+      #
+      # 이 잡이 보는 것은 컴파일 오류뿐이라 진짜 값이 필요 없다. 시크릿이 있으면 그것을,
+      # 없으면 자리표시자를 쓴다. **릴리스 빌드는 ios-release.yml 이 진짜 값을 넣는다.**
+      - name: Firebase 설정 파일 준비
+        env:
+          GOOGLE_SERVICE_INFO_PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
+        run: |
+          if [ -n "$GOOGLE_SERVICE_INFO_PLIST" ]; then
+            printf '%s' "$GOOGLE_SERVICE_INFO_PLIST" > ios/App/App/GoogleService-Info.plist
+          else
+            echo "::notice::GOOGLE_SERVICE_INFO_PLIST 가 없어 자리표시자로 빌드합니다"
+            cat > ios/App/App/GoogleService-Info.plist <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>API_KEY</key><string>ci-placeholder</string>
+            <key>GCM_SENDER_ID</key><string>000000000000</string>
+            <key>BUNDLE_ID</key><string>com.nugabox.nuplex</string>
+            <key>PROJECT_ID</key><string>ci-placeholder</string>
+            <key>GOOGLE_APP_ID</key><string>1:000000000000:ios:0000000000000000</string>
+            <key>IS_GCM_ENABLED</key><true/>
+          </dict>
+          </plist>
+          PLIST
+          fi
+
       # 서명 없이 시뮬레이터용으로만 빌드한다. 인증서가 CI 에 없어도 컴파일 오류는 잡힌다.
       - name: 시뮬레이터 빌드
         working-directory: ios/App

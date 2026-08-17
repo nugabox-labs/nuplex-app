@@ -48,11 +48,13 @@ docs/           브릿지 계약 · 푸시 페이로드 · 릴리스 · 트러�
 
 ## 문서
 
+- [CLAUDE.md](CLAUDE.md) — **작업 시작점.** 문서 지도와 두 에이전트(Claude Code · Desktop) 동기화 규약
+- [docs/plan/active/](docs/plan/active/) — **지금 무엇이 남았는지.** 진행 상황의 단일 진실 원천
 - [docs/BRIDGE_CONTRACT.md](docs/BRIDGE_CONTRACT.md) — 웹 ↔ 셸 계약. **`nuplex` 저장소에도 사본을 둔다**
 - [docs/PUSH_PAYLOAD.md](docs/PUSH_PAYLOAD.md) — 푸시 페이로드 스키마
 - [docs/TESTING.md](docs/TESTING.md) — **테스트 계정**과 확인 목록
 - [docs/PLEX_DEEPLINK.md](docs/PLEX_DEEPLINK.md) — Plex 앱으로 보내는 사다리
-- [docs/RELEASE.md](docs/RELEASE.md) — 버전 규칙과 배포 절차
+- [docs/RELEASE.md](docs/RELEASE.md) — 버전 규칙 · TestFlight · 심사
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 ## 시크릿
