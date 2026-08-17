@@ -79,5 +79,11 @@
 	<array>
 		<string>plex</string>
 	</array>
+	<!-- 수출 규정(Export Compliance) 응답을 미리 박아 둔다.
+	     셸은 HTTPS 밖의 암호화를 쓰지 않으므로 면제 대상이다.
+	     이걸 빼면 TestFlight 에 올릴 때마다 App Store Connect 에서 사람이 답할
+	     때까지 빌드가 "처리 중" 에 멈춰 있다. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

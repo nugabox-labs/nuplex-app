@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  TestFlight · App Store 업로드용 내보내기 설정.
+
+  `xcodebuild -exportArchive -exportOptionsPlist ios/App/exportOptions.plist` 에 쓴다.
+  아카이브는 개발 인증서로 서명돼 나오므로, 내보내기 단계에서 배포 인증서로 다시
+  서명한다. 그래서 `-allowProvisioningUpdates` 를 함께 넘겨야 한다 — 없으면
+  배포 인증서·프로파일이 없다며 멈춘다.
+
+  signingStyle 을 automatic 으로 둔 이유: 수동으로 두면 프로파일 이름을 여기에
+  박아야 하고, 프로파일이 갱신될 때마다 이 파일을 고쳐야 한다.
+-->
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>app-store-connect</string>
+
+	<key>teamID</key>
+	<string>U5796QB9C8</string>
+
+	<key>signingStyle</key>
+	<string>automatic</string>
+
+	<!-- 크래시 로그를 심볼로 볼 수 있게 dSYM 을 함께 올린다. -->
+	<key>uploadSymbols</key>
+	<true/>
+
+	<!-- 앱 씬닝을 하지 않고 하나의 IPA 로 내보낸다. TestFlight 업로드에는 이게 맞다. -->
+	<key>thinning</key>
+	<string>&lt;none&gt;</string>
+
+	<!-- Bitcode 는 Xcode 14 에서 폐지됐다. 명시해 두어 경고를 없앤다. -->
+	<key>uploadBitcode</key>
+	<false/>
+</dict>
+</plist>

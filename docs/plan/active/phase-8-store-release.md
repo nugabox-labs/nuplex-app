@@ -176,8 +176,12 @@ Desktop 이 1·2 를 고쳤다.** [Code] 는 같은 파일을 다시 건드리�
 
 ## C. 릴리스 파이프라인 [Code]
 
-- [ ] [Code] `exportOptions.plist` 추가 후 `ios-release.yml` 의 IPA 내보내기·업로드 주석 해제
-      (B 의 인증서가 있어야 실제로 돌려볼 수 있다)
+- [x] [Desktop] `exportOptions.plist` 추가 — `ios/App/exportOptions.plist`
+      - `method: app-store-connect`, `teamID: U5796QB9C8`, 자동 서명
+      - **아카이브는 개발 인증서로 서명돼 나온다.** 배포 서명은 내보내기 단계에서 붙으므로
+        `xcodebuild -exportArchive` 에 `-allowProvisioningUpdates` 를 반드시 함께 넘긴다
+- [ ] [Code] `ios-release.yml` 의 IPA 내보내기·업로드 주석 해제
+      (CI 는 GitHub Secrets 의 인증서·API 키가 있어야 돌아간다)
 - [ ] [Code] `assetlinks.json` — App Links 검증용. **업로드 키의 SHA-256 지문이 필요**하므로
       B 이후에 가능. `nuplex` 웹의 `/.well-known/` 에 배포한다
 - [x] [Code] CI iOS 잡이 `GoogleService-Info.plist` 부재로 실패하던 것 수정
@@ -185,9 +189,21 @@ Desktop 이 1·2 를 고쳤다.** [Code] 는 같은 파일을 다시 건드리�
 
 ## D. TestFlight [Desktop]
 
-- [ ] [Code] 태그 `v1.0.0` 푸시 → `ios-release.yml` 이 TestFlight 업로드
+- [x] [Desktop] 로컬에서 배포 서명 IPA 생성 (2026-08-17)
+      - 배포용 인증서가 없었는데 `-allowProvisioningUpdates` 로 Xcode 가 만들었다
+      - 결과: `Authority=Apple Distribution: Nuga Jang (U5796QB9C8)`,
+        `1.0.0` / 빌드 `1`, 번들에 개발 주소 없음(프로덕션 `nuplex.nugabox.com`)
+      - 아카이브를 `~/Library/Developer/Xcode/Archives/<오늘>/NUPLEX 1.0.0 (1).xcarchive`
+        에 넣어 뒀다 — **Xcode > Window > Organizer 에서 바로 Distribute App 이 된다**
+      - `ITSAppUsesNonExemptEncryption = false` 를 Info.plist 에 선언했다.
+        없으면 올릴 때마다 수출 규정 답변을 기다리며 빌드가 멈춘다
+- [ ] [사람] TestFlight 업로드
+      - 업로드에는 App Store Connect API 키나 앱 암호가 필요하다 —
+        **자격증명이라 에이전트가 하지 않는다.** Organizer 에서 올리면 된다
+      - 이 맥에는 API 키(`~/.appstoreconnect/private_keys/`)도 Transporter 도 없다
+- [ ] [Code] 태그 `v1.0.0` 푸시 → `ios-release.yml` 이 TestFlight 업로드 (CI 경로)
 - [ ] [Desktop] App Store Connect → TestFlight 에서 빌드 처리 완료 확인
-- [ ] [Desktop] 수출 규정(Export Compliance) 응답 — HTTPS 만 쓰므로 면제 대상
+- [x] [Desktop] 수출 규정(Export Compliance) — Info.plist 에 면제 선언을 박아 해결
 - [ ] [Desktop] 내부 테스터 초대 → 실기기 설치 → §A 확인 목록 재확인
 - [ ] [Desktop] Play Console 내부 테스트 트랙에 AAB 올라갔는지 확인
 
