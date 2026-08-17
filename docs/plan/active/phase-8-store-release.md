@@ -33,18 +33,20 @@ Desktop 은 GUI 를 쓸 수 있으니 이어받는다.
 - [ ] [Desktop] `xcrun simctl push` 로 공지 푸시 → 배너 표시 → **탭 → 해당 화면 이동**
       - 페이로드 예시는 `docs/TESTING.md` "푸시" 절
       - `aps` 옆에 `route`·`type` 을 최상위 키로 둔다
-      - **여기까지 됨**: 앱 백그라운드 상태로 `simctl push` → 배너 정상 표시
-        (제목 `새 공지가 등록되었습니다` / 본문 `8월 서비스 점검 안내`, 앱 아이콘 정상).
-        알림 센터에도 남는다. 로그 `shouldPresentAlert: 1`, `pipelineState: completed`
-      - 막힘: **배너·알림 센터 탭이 자동화로 안 눌린다**(위 상자). 탭 이후 라우팅 미검증
+      - 배너 표시는 정상 (제목 `새 공지가 등록되었습니다` / 본문 `8월 서비스 점검 안내`,
+        앱 아이콘 정상). 알림 센터에도 남는다. 로그 `shouldPresentAlert: 1`,
+        `pipelineState: completed`
+      - **탭 결과: 라우팅이 안 된다. 앱이 앞으로 나오기만 하고 그대로다.**
+        → 아래 A-0-1. **이게 이번 세션에서 가장 큰 건이다**
 - [ ] [Desktop] 앱 완전 종료 상태에서 알림 탭 → 콜드 스타트 라우팅
       (Android 에서는 통과한 경로. iOS 는 `NuplexPush.offer` 큐가 같은 역할)
-      - 막힘: 위와 같은 이유로 알림 탭을 못 한다
+      - 막힘: 백그라운드 라우팅부터 깨져 있어(A-0-1) 콜드 스타트를 볼 의미가 없다.
+        A-0-1 을 고친 뒤에 확인한다
 - [ ] [Desktop] 오프라인 화면 — 네트워크 끊고 실행 → 흰 화면이 아닌 오프라인 화면
       - 막힘: 맥의 네트워크를 끊지 않고는 `Network.getStatus().connected === false` 분기를
         탈 수 없다. 시뮬레이터에는 비행기 모드가 없다. **이 분기는 미검증**
       - 대신 "웹 주소에 닿지 못하는" 상황을 만들어 봤다(`VITE_WEB_BASE_URL=https://localhost:9`).
-        결과가 좋지 않다 → 아래 A-2 요청 참고
+        결과가 좋지 않다 → 아래 A-0-3 참고
 - [ ] [Desktop] 노치·홈 인디케이터 침범 없음
       - **실패(상단).** 로그인 후 웹 헤더가 상태바·다이나믹 아일랜드를 침범한다.
         시계가 `NUPLEX` 로고 위에 겹치고, 프로필 아바타가 배터리 아이콘과 겹친다
@@ -56,17 +58,53 @@ Desktop 은 GUI 를 쓸 수 있으니 이어받는다.
         (`shell/public/styles/shell.css:33`)은 안전영역을 제대로 쓰고 있어 멀쩡하다
       - 하단 홈 인디케이터는 스크롤 콘텐츠뿐이라 침범 없음. 고정 하단 바가 있는 화면
         (채팅 입력창)은 헤더 버튼을 못 눌러 진입하지 못했다 — **미검증**
-      - → 아래 A-1 요청
+      - → 아래 A-0-2
 
 ### A-0. [Code] 에 넘기는 요청
 
 Desktop 은 `src/`·`ios/`·웹 저장소를 고치지 않는다(CLAUDE.md §2.2-6). 확인한 것만 남긴다.
 
-1. **[Code] 웹 헤더 안전영역** — `nuplex` 저장소 `components/navbar.tsx:83`.
+1. **[Code] iOS 알림 탭 라우팅이 동작하지 않는다 — 최우선**
+   - 증상: 앱 백그라운드 상태에서 공지 알림을 탭하면 **앱이 앞으로 나오기만 하고
+     `route` 로 이동하지 않는다.** 확인 시각 2026-08-17 16:04:07
+   - OS 는 제대로 넘겼다. SpringBoard 로그 —
+     `[com.nugabox.nuplex] UINotificationResponseAction com.apple.UNNotificationDefaultActionIdentifier withHandler called`,
+     앱 프로세스 로그 — `Received action(s) in scene-update: <UINotificationResponseAction: …>`
+   - **그런데 셸 로그가 하나도 없다.** `[Nuplex] 푸시 라우트로 이동`(`NuplexViewController.swift:129`)
+     도, `[Nuplex] 웹 준비 전이라 라우트를 대기열에 넣습니다`(`NuplexPush.swift`)도,
+     `[Nuplex] 알림에 route 가 없습니다` 도 없다
+   - 코드를 따라가면 **조용히 끝나는 경로는 하나뿐이다.** `route(from:)` 은 값이 없으면
+     `"/"` 로 폴백하므로 절대 nil 이 아니고, 따라서 `offer()` 는 반드시 둘 중 하나를 로그한다.
+     로그가 없다는 것은 `webReady == true` 로 navigate 클로저까지 갔는데
+     **`AppDelegate.rootViewController()` 가 nil 을 돌려줬다**는 뜻이다
+     (`rootViewController()?.navigate(toRoute:)` — 옵셔널 체이닝이라 조용히 끝난다)
+   - 짚어볼 곳: `SceneDelegate.swift` 가 `window.rootViewController = NuplexViewController()`
+     로 만든 뒤 `SceneDelegateProxy.shared.scene(_:willConnectTo:options:)` 를 부른다.
+     Capacitor 프록시가 자체 window 를 키로 올리면 `rootViewController()` 의
+     `keyWindow?.rootViewController` 가 `CAPBridgeViewController` 가 되어
+     `as? NuplexViewController` 캐스팅이 실패한다. **추정이므로 확인이 필요하다**
+   - 제안: 원인과 무관하게 `rootViewController()` 가 nil 일 때 **로그를 남기게** 한다.
+     지금은 실패가 완전히 조용해서 이 버그가 Phase 7 을 통과했다
+   - 페이로드는 계약대로였다(`aps` 옆 최상위 `route`·`type`·`v`) —
+     `{"aps":{"alert":{…}},"v":"1","type":"notice","route":"/?notice=1"}`
+   - **Android 는 같은 경로가 Phase 7 에서 통과했다.** iOS 만의 문제다
+
+2. **[Code] 웹 헤더 안전영역** — `nuplex` 저장소 `components/navbar.tsx:83`.
    `fixed ... top-0` 에 `env(safe-area-inset-top)` 만큼 패딩을 준다. 안 하면 iOS 에서
    헤더 버튼이 상태바에 먹혀 눌리지 않는다(위 증상). **심사 전에 고쳐야 한다** —
    심사자가 채팅·알림에 못 들어간다.
-2. **[Code] 웹 이동 실패가 오프라인 화면으로 안 간다(의심)** — 재현: `VITE_WEB_BASE_URL`
+   - 구체적으로: `<header>` 에 `pt-[env(safe-area-inset-top)]` 를 주고, 높이는 지금의
+     `h-16`(64px)을 안쪽 행에 그대로 두어 **총 높이가 inset + 64px** 가 되게 한다.
+     배경 그라디언트(`:89` 의 `h-[130%]`)도 그 늘어난 높이를 덮어야 한다
+   - iPhone 17(다이나믹 아일랜드)에서 inset 은 **59pt**, 노치 세대는 47pt, 홈버튼
+     세대는 20pt 다. **고정값을 박지 말고 `env()` 를 쓴다** — 기기마다 다르다
+   - 하단은 `env(safe-area-inset-bottom)`(홈 인디케이터 34pt). 지금 홈 화면은 스크롤
+     콘텐츠뿐이라 문제가 없지만 **고정 하단 바가 있는 화면(채팅 입력창)은 확인이 필요하다.**
+     헤더 버튼이 안 눌려 그 화면에 들어가지 못했다 — 미검증
+   - 셸 자체 화면(`shell/public/styles/shell.css:33`)이 이미 같은 방식으로 처리하고 있으니
+     그쪽을 참고하면 된다. 뷰포트는 이미 `viewport-fit=cover` 라 웹만 고치면 된다
+
+3. **[Code] 웹 이동 실패가 오프라인 화면으로 안 간다(의심)** — 재현: `VITE_WEB_BASE_URL`
    을 닿지 않는 주소로 주고 실행(`https://localhost:9`, `allowNavigation` 에 있는 호스트).
    - 캐시된 설정이 있어 부팅은 통과하고 `Preferences` 에 `webBaseUrl=https://localhost:9`
      까지 기록된다 = `main.ts:107` 의 `goTo(target)` 에 도달했다
@@ -101,7 +139,8 @@ Desktop 은 `src/`·`ios/`·웹 저장소를 고치지 않는다(CLAUDE.md §2.2
 
 서비스 계정 업로드는 **앱이 한 번 등록된 뒤에만** 동작한다. 여기가 먼저다.
 
-- [ ] [사람] Apple Developer Program 가입 상태 확인 (연 $99, 갱신 여부)
+- [x] [사람] Apple Developer Program 가입 상태 확인 (연 $99, 갱신 여부)
+      - 가입돼 있고 유효하다고 확인받음 (2026-08-17)
 - [ ] [Desktop] App Store Connect 에 앱 생성 — Bundle ID `com.nugabox.nuplex`, 이름 `NUPLEX`
 - [ ] [Desktop] App Store Connect API 키 발급 (Issuer ID · Key ID · `.p8`)
       - **`.p8` 은 재다운로드 불가.** 받는 즉시 안전한 곳에 원본 보관
@@ -149,10 +188,9 @@ Desktop 은 `src/`·`ios/`·웹 저장소를 고치지 않는다(CLAUDE.md §2.2
 
 - **iOS 시스템 UI 를 자동으로 못 누른다** (2026-08-17, Desktop). 시뮬레이터에 주입한 탭은
   앱 화면·홈 화면에는 가지만 SpringBoard 계층(권한 다이얼로그·배너·알림 센터)에는 안 간다.
-  Return 키도 안 통한다. 이번엔 사람이 "허용" 을 눌러 권한은 넘겼고, **알림 탭이 필요한
-  A-2·A-3 는 아직 막혀 있다.** 넘기는 방법 둘 —
-  (a) 사람이 시뮬레이터에서 알림을 한 번 탭한다, (b) macOS 보조 접근으로 Simulator 앱을
-  제어할 권한을 준다(이번 세션엔 거부됨). 실기기(D절)에서는 어차피 손으로 하게 된다.
+  Return 키도 안 통한다. 사람이 "허용" 과 알림 탭을 대신 눌러 A-2 까지는 진행했다.
+  넘기는 방법 둘 — (a) 사람이 시뮬레이터에서 한 번 눌러 준다, (b) macOS 보조 접근으로
+  Simulator 앱을 제어할 권한을 준다. 실기기(D절)에서는 어차피 손으로 하게 된다.
 
 - **오프라인 분기를 시뮬레이터에서 못 만든다** (2026-08-17, Desktop). 비행기 모드가 없고
   맥 네트워크를 끊는 건 범위 밖이라 판단했다. 위 A-0-2 참고.
