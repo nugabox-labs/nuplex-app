@@ -15,12 +15,31 @@
 Claude Code 는 시뮬레이터를 탭할 수 없어 여기서 멈췄다(`CLAUDE.md` §2.1).
 Desktop 은 GUI 를 쓸 수 있으니 이어받는다.
 
-- [ ] [Desktop] 시뮬레이터에서 온보딩 → **알림 권한 허용** → 홈까지 진입
+> **Desktop 도 시스템 UI 는 자동으로 못 누른다.** 시뮬레이터에 주입한 탭(HID)은 앱 화면과
+> 홈 화면에는 전달되지만 **SpringBoard 가 그리는 계층 — 권한 다이얼로그 · 배너 · 알림 센터 —
+> 에는 전달되지 않는다.** Return 키도 안 통한다. 이 항목들은 사람이 시뮬레이터 창을 한 번
+> 클릭해 줘야 넘어간다. macOS 보조 접근으로 Simulator 앱을 직접 클릭하는 우회로가 있으나
+> 이번 세션에서는 그 권한이 승인되지 않았다.
+
+- [x] [Desktop] 시뮬레이터에서 온보딩 → **알림 권한 허용** → 홈까지 진입
+      - iPhone 17 / iOS 26.5, Debug 빌드(프로덕션 주소 `https://nuplex.nugabox.com`)
+      - 온보딩 "알림 받기" → 권한 다이얼로그 → **허용**(사람이 클릭) → 프로필 `백송이` →
+        가입 이메일 확인 → 홈 히어로까지 진입 확인
+      - 권한 상태를 로그로 확인 — `authorizationStatus: Authorized`, `didGrant: 1`,
+        `alertSetting: Enabled`, `remoteNotifications: Enabled`
+      - **함정**: 이메일 입력 후 소프트 키보드가 뜬 상태에서는 "확인" 버튼 탭이 먹지 않았다.
+        Return 키로는 제출됐다. 주입 탭 한정 현상인지 실제 사용자에게도 나는지는 **미검증** —
+        실기기(D절)에서 손으로 확인할 것
 - [ ] [Desktop] `xcrun simctl push` 로 공지 푸시 → 배너 표시 → **탭 → 해당 화면 이동**
       - 페이로드 예시는 `docs/TESTING.md` "푸시" 절
       - `aps` 옆에 `route`·`type` 을 최상위 키로 둔다
+      - **여기까지 됨**: 앱 백그라운드 상태로 `simctl push` → 배너 정상 표시
+        (제목 `새 공지가 등록되었습니다` / 본문 `8월 서비스 점검 안내`, 앱 아이콘 정상).
+        알림 센터에도 남는다. 로그 `shouldPresentAlert: 1`, `pipelineState: completed`
+      - 막힘: **배너·알림 센터 탭이 자동화로 안 눌린다**(위 상자). 탭 이후 라우팅 미검증
 - [ ] [Desktop] 앱 완전 종료 상태에서 알림 탭 → 콜드 스타트 라우팅
       (Android 에서는 통과한 경로. iOS 는 `NuplexPush.offer` 큐가 같은 역할)
+      - 막힘: 위와 같은 이유로 알림 탭을 못 한다
 - [ ] [Desktop] 오프라인 화면 — 네트워크 끊고 실행 → 흰 화면이 아닌 오프라인 화면
 - [ ] [Desktop] 노치·홈 인디케이터 침범 없음
 
