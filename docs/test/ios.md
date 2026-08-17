@@ -7,6 +7,8 @@
 | 날짜 | 기기 / OS | 빌드 | 한 줄 |
 | --- | --- | --- | --- |
 | 2026-08-17 | iPhone 17 시뮬레이터 / iOS 26.5 | Debug, 웹 `https://nuplex.nugabox.com` | 푸시 라우팅과 안전영역을 고치고 통과 |
+| 2026-08-17 | 실기기 / TestFlight | `1.0.0 (1)` | Plex 딥링크 실패(브라우저로 샘) · 상단 바 겹침 발견 |
+| 2026-08-17 | 실기기 / TestFlight | `1.0.0 (2)` | 상단 바·로고 수정본. **확인 대기** |
 
 ---
 
@@ -71,7 +73,16 @@
         호스트라(Phase 7 에서 Android APK 로 확인) `universalLinksOnly` 가 걸러내고
         곧장 웹 폴백으로 떨어진다
       - `LSApplicationQueriesSchemes` 에 `plex` 는 선언돼 있다(빠지면 항상 "미설치" 판정)
-      - **다음 단계**: 아래 §4-1 로 스킴 등록 여부부터 가른다
+      - **스킴 자체는 iOS 에서 맞다** — 기기 Safari 에 앱이 만드는 주소를 그대로 넣으면
+        Plex 앱이 열린다(2026-08-17 확인). 열린 뒤 `Can't Reach Server /
+        Failed to fetch play queue response` 가 뜨는데, 이건 Phase 7 에 적힌
+        **Plex 가 정지 상태에서 깨어나 서버를 못 잡은 경우**다. Plex 를 한 번 띄워 두면 안 난다
+      - 따라서 남은 원인은 **앱 안에서 `canOpenURL` 또는 `app.open` 이 실패**한 쪽이다.
+        `LSApplicationQueriesSchemes` 에 `plex` 는 배포된 IPA 에서도 확인했고,
+        웹이 넘기는 props 도 히어로·상세가 동일하다
+      - **다음 단계**: 기기를 USB 로 꽂고 `Console.app` 에서 `Nuplex` 로 걸러
+        `Plex 앱으로 보냅니다` 와 `Plex 앱이 링크를 받지 않아 브라우저로 넘깁니다` 중
+        어느 쪽인지 본다. 그래야 두 경우가 갈린다
 - [ ] ★ 시리즈 → 웹 폴백(Plex Web 상세)
 - [ ] ★ Plex 미설치 → App Store 의 Plex 페이지
 
