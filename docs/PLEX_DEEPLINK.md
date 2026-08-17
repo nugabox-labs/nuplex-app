@@ -141,3 +141,24 @@ Android 는 `FLAG_ACTIVITY_REQUIRE_NON_BROWSER` 대신 명시적 패키지를 �
 - [ ] iOS — 위 둘. **스킴 형식은 Android APK 에서 확인한 것이라 iOS 는 미검증이다**
 - [ ] 시리즈에서 "시청하기" → 웹 폴백으로 상세가 열린다 (웹이 `type` 을 넘긴 뒤)
 - [ ] 어느 경로에서도 웹뷰 안에 Plex 가 갇히지 않는다
+
+## 시리즈는 첫 화로 보낸다 (2026-08-17)
+
+Plex 앱에는 **상세 페이지를 여는 딥링크가 없다.** APK 에 등록된 `plex://` 문자열은
+`watch/video?uri=` 와 `downloads/in-progress` 둘뿐이고, 이번에 다시 뜯어 확인했다.
+`plex:` 스킴 필터에는 호스트·경로 제한이 없어 앱이 내부에서 경로를 해석한다.
+
+`watch/video` 는 재생 명령이라 시리즈를 넘기면 재생 대기열을 못 만들어 실패한다.
+그래서 셸은 `show`·`season`·`collection`·`artist`·`album` 을 웹으로 돌린다 —
+**영화만 앱에서 열리고 시리즈는 브라우저로 새는 이유였다.**
+
+해결은 셸이 아니라 웹에서 했다. 항목 조회에 **첫 화의 ratingKey** 를 얹어
+(`nuplex: lib/library.ts` 의 `first_episode_rating_key`), 시리즈 버튼이 그 화를
+가리키게 했다. 화는 재생 가능한 항목이라 스킴이 그대로 통한다.
+셸의 `deepLinkLadder` 는 손대지 않았다 — 넘어오는 `type` 이 `episode` 로 바뀔 뿐이다.
+
+스페셜(시즌 0)은 뒤로 미룬다. 처음 보는 사람에게 보여줄 화가 아니다.
+
+**iOS 스킴은 유효하다.** 기기 Safari 에 앱이 만드는 주소를 넣으면 Plex 가 열린다.
+열린 뒤 `Failed to fetch play queue response` 가 뜨면 Plex 가 정지 상태에서 깨어난
+경우다 — 한 번 띄워 두면 안 난다. Android 에서도 같다.
