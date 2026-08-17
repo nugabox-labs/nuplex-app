@@ -146,18 +146,20 @@ Desktop 이 1·2 를 고쳤다.** [Code] 는 같은 파일을 다시 건드리�
 
 - [x] [사람] Apple Developer Program 가입 상태 확인 (연 $99, 갱신 여부)
       - 가입돼 있고 유효하다고 확인받음 (2026-08-17)
-> **막힘(2026-08-17): App Store Connect 이 로그아웃 상태다.** Chrome 으로 열면
-> `login?authResult=FAILED` 로 떨어진다. Apple ID 로그인은 비밀번호와 2단계 인증이라
-> **에이전트가 대신 할 수 없다.** 사람이 Chrome 에서 한 번 로그인해 두면 그 뒤의
-> 앱 생성·메타데이터 입력은 Desktop 이 이어받을 수 있다.
+> **사람이 직접 해야 하는 것** — 비밀번호·키 취급이라 대신하지 않는다:
+> Apple ID 로그인(2단계 인증), `.p8` · `.p12` 다운로드와 보관, GitHub Secrets 등록,
+> 유료 계약 동의.
 >
-> 로그인 뒤에도 **사람이 직접 해야 하는 것** — 비밀번호·키 취급이라 대신하지 않는다:
-> `.p8` · `.p12` 다운로드와 보관, GitHub Secrets 등록, 유료 계약 동의.
+> **Claude in Chrome 확장이 끊기면 Desktop 은 브라우저를 조작할 수 없다.**
+> 화면을 읽는 것까지는 되지만 클릭·입력이 안 된다. 끊겼으면 사람이 Chrome 의
+> Claude 사이드 패널에서 다시 로그인해야 한다.
 
-- [ ] [사람] Chrome 에서 App Store Connect 로그인 (이게 B 의 선행 조건)
-- [ ] [Desktop] App Store Connect 에 앱 생성 — Bundle ID `com.nugabox.nuplex`, 이름 `NUPLEX`
-      - 앱 생성 전에 Developer 포털에 App ID `com.nugabox.nuplex` 가 있어야 한다.
-        푸시 활성화는 확인됨(커밋 `8dcec3d`)
+- [x] [사람] Chrome 에서 App Store Connect 로그인
+- [x] [사람] App Store Connect 에 앱 생성 — Bundle ID `com.nugabox.nuplex`, 이름 `NUPLEX`
+      - 2026-08-17 확인. **App ID `6802186306`**, `iOS 앱 버전 1.0`,
+        상태 `1.0 제출 준비 중`
+      - 남은 것: **미리보기·스크린샷 0/10** (iPhone 6.5" 디스플레이 필요),
+        개인정보 처리방침 URL, 연령 등급 — E절에서 다룬다
 - [ ] [사람] App Store Connect API 키 발급 (Issuer ID · Key ID · `.p8`)
       - **`.p8` 은 재다운로드 불가.** 받는 즉시 안전한 곳에 원본 보관
       - 키 파일 취급이라 [Desktop] → **[사람]** 으로 소유자를 옮긴다
