@@ -37,11 +37,10 @@ Desktop 은 GUI 를 쓸 수 있으니 이어받는다.
         앱 아이콘 정상). 알림 센터에도 남는다. 로그 `shouldPresentAlert: 1`,
         `pipelineState: completed`
       - **탭 결과: 라우팅이 안 된다. 앱이 앞으로 나오기만 하고 그대로다.**
-        → 아래 A-0-1. **이게 이번 세션에서 가장 큰 건이다**
+        → 아래 A-0-1. **원인을 찾아 고쳤다**(커밋 `0671b83`). 탭 검증만 남았다
 - [ ] [Desktop] 앱 완전 종료 상태에서 알림 탭 → 콜드 스타트 라우팅
       (Android 에서는 통과한 경로. iOS 는 `NuplexPush.offer` 큐가 같은 역할)
-      - 막힘: 백그라운드 라우팅부터 깨져 있어(A-0-1) 콜드 스타트를 볼 의미가 없다.
-        A-0-1 을 고친 뒤에 확인한다
+      - A-0-1 을 고쳤으니 이제 볼 수 있다. 백그라운드 탭이 통과하면 이어서 확인한다
 - [ ] [Desktop] 오프라인 화면 — 네트워크 끊고 실행 → 흰 화면이 아닌 오프라인 화면
       - 막힘: 맥의 네트워크를 끊지 않고는 `Network.getStatus().connected === false` 분기를
         탈 수 없다. 시뮬레이터에는 비행기 모드가 없다. **이 분기는 미검증**
@@ -60,39 +59,45 @@ Desktop 은 GUI 를 쓸 수 있으니 이어받는다.
         (채팅 입력창)은 헤더 버튼을 못 눌러 진입하지 못했다 — **미검증**
       - → 아래 A-0-2
 
-### A-0. [Code] 에 넘기는 요청
+### A-0. 이번에 나온 세 건
 
-Desktop 은 `src/`·`ios/`·웹 저장소를 고치지 않는다(CLAUDE.md §2.2-6). 확인한 것만 남긴다.
+원래는 `CLAUDE.md` §2.2-6 대로 [Code] 에 넘길 항목이었으나, **사람이 직접 진행하라고 해서
+Desktop 이 1·2 를 고쳤다.** [Code] 는 같은 파일을 다시 건드리기 전에 이 절을 먼저 읽을 것.
 
-1. **[Code] iOS 알림 탭 라우팅이 동작하지 않는다 — 최우선**
-   - 증상: 앱 백그라운드 상태에서 공지 알림을 탭하면 **앱이 앞으로 나오기만 하고
-     `route` 로 이동하지 않는다.** 확인 시각 2026-08-17 16:04:07
-   - OS 는 제대로 넘겼다. SpringBoard 로그 —
-     `[com.nugabox.nuplex] UINotificationResponseAction com.apple.UNNotificationDefaultActionIdentifier withHandler called`,
-     앱 프로세스 로그 — `Received action(s) in scene-update: <UINotificationResponseAction: …>`
-   - **그런데 셸 로그가 하나도 없다.** `[Nuplex] 푸시 라우트로 이동`(`NuplexViewController.swift:129`)
-     도, `[Nuplex] 웹 준비 전이라 라우트를 대기열에 넣습니다`(`NuplexPush.swift`)도,
-     `[Nuplex] 알림에 route 가 없습니다` 도 없다
-   - 코드를 따라가면 **조용히 끝나는 경로는 하나뿐이다.** `route(from:)` 은 값이 없으면
-     `"/"` 로 폴백하므로 절대 nil 이 아니고, 따라서 `offer()` 는 반드시 둘 중 하나를 로그한다.
-     로그가 없다는 것은 `webReady == true` 로 navigate 클로저까지 갔는데
-     **`AppDelegate.rootViewController()` 가 nil 을 돌려줬다**는 뜻이다
-     (`rootViewController()?.navigate(toRoute:)` — 옵셔널 체이닝이라 조용히 끝난다)
-   - 짚어볼 곳: `SceneDelegate.swift` 가 `window.rootViewController = NuplexViewController()`
-     로 만든 뒤 `SceneDelegateProxy.shared.scene(_:willConnectTo:options:)` 를 부른다.
-     Capacitor 프록시가 자체 window 를 키로 올리면 `rootViewController()` 의
-     `keyWindow?.rootViewController` 가 `CAPBridgeViewController` 가 되어
-     `as? NuplexViewController` 캐스팅이 실패한다. **추정이므로 확인이 필요하다**
-   - 제안: 원인과 무관하게 `rootViewController()` 가 nil 일 때 **로그를 남기게** 한다.
-     지금은 실패가 완전히 조용해서 이 버그가 Phase 7 을 통과했다
-   - 페이로드는 계약대로였다(`aps` 옆 최상위 `route`·`type`·`v`) —
-     `{"aps":{"alert":{…}},"v":"1","type":"notice","route":"/?notice=1"}`
-   - **Android 는 같은 경로가 Phase 7 에서 통과했다.** iOS 만의 문제다
+1. ~~**[Code] iOS 알림 탭 라우팅이 동작하지 않는다**~~ → **Desktop 이 고쳤다** (커밋 `0671b83`)
+   - **원인: Capacitor 가 알림 델리게이트를 가로챈다.**
+     `SceneDelegate.scene(_:willConnectTo:)` 안에서 부르는
+     `SceneDelegateProxy.shared.scene(_:willConnectTo:options:)` 가
+     `UNUserNotificationCenter.current().delegate` 를 Capacitor 의 `NotificationRouter`
+     로 바꿔치운다. `AppDelegate.didFinishLaunching` 에서 걸어 둔 것이 그 직후 덮인다
+   - 그래서 우리 핸들러가 **한 번도** 불리지 않았다. 증상 둘 —
+     · 알림을 눌러도 `didReceive` 가 안 불려 `route` 로 이동하지 않는다
+     · 앱이 떠 있으면 `NotificationRouter` 가 표시 옵션 0 으로 답해 배너 자체가 안 뜬다
+   - 조치: 프록시 호출 **뒤에** 델리게이트를 도로 가져온다. 셸은 Capacitor 푸시
+     플러그인을 쓰지 않고 알림을 네이티브에서 직접 처리하므로 잃는 것이 없다
+   - 검증: 포그라운드 푸시에서 시스템 로그의 `shouldPresentAlert` 가
+     **NO → YES** 로 바뀌는 것을 확인했다(`Received response 0` 도 사라짐).
+     **알림 탭 라우팅은 확인 대기** — 사람이 눌러 줘야 한다
+   - **찾는 데 오래 걸린 이유를 남긴다.** 처음엔 `rootViewController()` 가 nil 이라
+     조용히 끝나는 것으로 진단했는데 **틀렸다.** 진단용 로그를 넣어 보니 핸들러
+     자체가 안 불렸다. Firebase 스위즐링도 의심해 `FirebaseAppDelegateProxyEnabled`
+     를 꺼 봤지만 무관했다(되돌림). 결국 생명주기 시점마다 델리게이트 클래스명을
+     찍어서야 `AppDelegate → NotificationRouter` 로 바뀌는 순간이 잡혔다.
+     **로그가 없다는 사실만으로 코드 경로를 추론하면 틀릴 수 있다** — 계측이 빨랐다
+   - 곁가지로 `rootViewController()` 를 `NuplexViewController.current` 로 통일하고
+     못 찾을 때 로그를 남기게 했다(커밋 `1510984`). 조용한 실패를 없애기 위함이다
 
-2. **[Code] 웹 헤더 안전영역** — `nuplex` 저장소 `components/navbar.tsx:83`.
-   `fixed ... top-0` 에 `env(safe-area-inset-top)` 만큼 패딩을 준다. 안 하면 iOS 에서
-   헤더 버튼이 상태바에 먹혀 눌리지 않는다(위 증상). **심사 전에 고쳐야 한다** —
-   심사자가 채팅·알림에 못 들어간다.
+2. **웹 헤더 안전영역** — `nuplex` 저장소 `components/navbar.tsx:83`.
+   **Desktop 이 고쳤다. 아직 배포하지 않았다** — 웹 `main` 푸시는 곧 운영 배포라
+   사람의 확인을 기다린다(`CLAUDE.md` §4). 작업 트리에만 있다.
+   - 근거(추측 아님): 배포된 HTML 은 `viewport-fit=cover` 를 켜 두었는데
+     **배포된 CSS 번들 55,951바이트 안에 `safe-area-inset` 이 0회**였다.
+     `app/layout.tsx:52` 주석이 "이걸 켰으면 `env(safe-area-inset-*)` 로 여백을 줘야
+     한다" 고 스스로 적어 두고 지키지 않은 상태였다
+   - 변경: `<header>` 에 `pt-[env(safe-area-inset-top)]` 한 줄. `next build` 후
+     번들에 `padding-top:env(safe-area-inset-top)` 이 실제로 들어간 것을 확인했다
+   - **시뮬레이터 육안 확인은 못 했다** — 배포해야 앱 웹뷰에 반영된다. 미검증
+   - 원래 계획(그대로 유효):
    - 구체적으로: `<header>` 에 `pt-[env(safe-area-inset-top)]` 를 주고, 높이는 지금의
      `h-16`(64px)을 안쪽 행에 그대로 두어 **총 높이가 inset + 64px** 가 되게 한다.
      배경 그라디언트(`:89` 의 `h-[130%]`)도 그 늘어난 높이를 덮어야 한다
