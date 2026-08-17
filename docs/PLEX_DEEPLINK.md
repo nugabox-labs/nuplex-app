@@ -162,3 +162,28 @@ Plex 앱에는 **상세 페이지를 여는 딥링크가 없다.** APK 에 등�
 **iOS 스킴은 유효하다.** 기기 Safari 에 앱이 만드는 주소를 넣으면 Plex 가 열린다.
 열린 뒤 `Failed to fetch play queue response` 가 뜨면 Plex 가 정지 상태에서 깨어난
 경우다 — 한 번 띄워 두면 안 난다. Android 에서도 같다.
+
+## preplay 는 쓸 수 없다 (2026-08-18 재확인)
+
+`plex://preplay/?metadataKey=…&metadataType=…&server=…` 로 **정보 화면**을 열 수 있다는
+자료가 있다(Plex 포럼의 비공식 정리). 재생 대기열을 만들지 않으니 시리즈에도 쓸 수 있고
+콜드 스타트 오류도 피할 것 같아 다시 시험했다. **안 된다.**
+
+- Plex 가 꺼져 있을 때: 홈이 아닌 전용 화면으로 라우팅되긴 하나 `Uh Oh… Something's
+  Not Right` 로 끝난다
+- Plex 가 떠 있을 때: 그냥 **홈 화면**으로 간다. 항목으로 가지 않는다
+
+즉 웹 저장소 `components/plex-link.tsx` 주석의 기존 결론("preplay·play·plexappext 를
+열두 가지로 눌러 봤지만 홈만 열렸다")이 맞다. Android 2026.15.0 에서 확인.
+**동작하는 경로는 `plex://watch/video?uri=…` 하나뿐이다.**
+
+## 첫 실행 때 뜨는 `Can't Reach Server`
+
+딥링크를 받은 Plex 가 **아직 미디어 서버에 연결되기 전**에 재생 대기열을 요청해서 난다.
+두 번째부터는 안 난다. 셸이나 웹에서 손댈 수 있는 것이 아니다 — 우리가 보내는 주소는
+같고, 받은 쪽의 준비가 안 됐을 뿐이다.
+
+줄일 수 있는 쪽은 **Plex 서버 설정**이다. 원격 접근이 릴레이나 탐색에 의존하면 앱이
+연결을 세우는 데 시간이 걸린다. 서버 설정의 **Custom server access URLs** 에
+`https://plex.nugabox.com:443` 을 넣어 두면 클라이언트가 곧장 그 주소로 붙는다.
+(미검증 — 서버 소유자만 바꿀 수 있다.)
