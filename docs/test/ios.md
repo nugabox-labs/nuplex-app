@@ -48,7 +48,14 @@
       - **처음엔 실패했다.** Capacitor 의 `SceneDelegateProxy` 가
         `UNUserNotificationCenter` 델리게이트를 가로채 우리 핸들러가 한 번도 안 불렸다.
         셸 커밋 `0671b83` 로 프록시 호출 뒤에 델리게이트를 되찾아 온다
-- [ ] 앱 **완전 종료** 상태에서 탭 → 콜드 스타트 라우팅 (`NuplexPush.offer` 큐)
+- [x] 앱 **완전 종료** 상태에서 탭 → 콜드 스타트 라우팅 (`NuplexPush.offer` 큐)
+      - 큐 동작이 로그에 그대로 남는다 —
+        `웹 준비 전이라 라우트를 대기열에 넣습니다: /title/88793` →
+        `브릿지 주입됨: capacitor://localhost` →
+        `브릿지 주입됨: https://nuplex.nugabox.com/`(웹 준비) →
+        `푸시 라우트로 이동: https://nuplex.nugabox.com/title/88793` →
+        `브릿지 주입됨: …/title/88793`
+      - `docs/PUSH_PAYLOAD.md` 가 "가장 자주 깨지는 지점" 이라 한 경로다
 - [ ] 로그아웃 → `DELETE /api/app/push/token`
 
 ## 4. Plex 딥링크 ★
