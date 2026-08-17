@@ -99,16 +99,30 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     ) {
         let userInfo = response.notification.request.content.userInfo
         NuplexPush.offer(route: NuplexPush.route(from: userInfo)) { route in
-            rootViewController()?.navigate(toRoute: route)
+            guard let controller = rootViewController() else {
+                // 여기서 조용히 끝나면 알림을 눌러도 아무 일이 없다. 반드시 남긴다.
+                NSLog("[Nuplex] 화면을 찾지 못해 라우트를 버렸습니다: \(route)")
+                return
+            }
+            controller.navigate(toRoute: route)
         }
         completionHandler()
     }
 
+    /**
+     알림 라우팅을 받을 화면.
+
+     **keyWindow 를 뒤지지 않는다.** Capacitor 의 SceneDelegateProxy 가 자체 window 를
+     올리면 `keyWindow?.rootViewController` 가 `CAPBridgeViewController` 가 되어
+     `as? NuplexViewController` 캐스팅이 실패한다. 그러면 옵셔널 체이닝이 조용히
+     끝나면서 **알림을 눌러도 아무 일이 없다** — 실제로 그렇게 깨져 있었다
+     (`docs/plan/active/phase-8-store-release.md` A-0-1).
+
+     푸시 토큰 등록이 이미 쓰고 있는 `NuplexViewController.current` 가 정답이다.
+     화면이 하나뿐인 앱이라 마지막으로 만들어진 것이 곧 현재 화면이다.
+     */
     private func rootViewController() -> NuplexViewController? {
-        UIApplication.shared.connectedScenes
-            .compactMap { ($0 as? UIWindowScene)?.keyWindow?.rootViewController }
-            .compactMap { $0 as? NuplexViewController }
-            .first
+        NuplexViewController.current
     }
 }
 
