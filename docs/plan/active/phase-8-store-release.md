@@ -141,10 +141,23 @@ Desktop 은 `src/`·`ios/`·웹 저장소를 고치지 않는다(CLAUDE.md §2.2
 
 - [x] [사람] Apple Developer Program 가입 상태 확인 (연 $99, 갱신 여부)
       - 가입돼 있고 유효하다고 확인받음 (2026-08-17)
+> **막힘(2026-08-17): App Store Connect 이 로그아웃 상태다.** Chrome 으로 열면
+> `login?authResult=FAILED` 로 떨어진다. Apple ID 로그인은 비밀번호와 2단계 인증이라
+> **에이전트가 대신 할 수 없다.** 사람이 Chrome 에서 한 번 로그인해 두면 그 뒤의
+> 앱 생성·메타데이터 입력은 Desktop 이 이어받을 수 있다.
+>
+> 로그인 뒤에도 **사람이 직접 해야 하는 것** — 비밀번호·키 취급이라 대신하지 않는다:
+> `.p8` · `.p12` 다운로드와 보관, GitHub Secrets 등록, 유료 계약 동의.
+
+- [ ] [사람] Chrome 에서 App Store Connect 로그인 (이게 B 의 선행 조건)
 - [ ] [Desktop] App Store Connect 에 앱 생성 — Bundle ID `com.nugabox.nuplex`, 이름 `NUPLEX`
-- [ ] [Desktop] App Store Connect API 키 발급 (Issuer ID · Key ID · `.p8`)
+      - 앱 생성 전에 Developer 포털에 App ID `com.nugabox.nuplex` 가 있어야 한다.
+        푸시 활성화는 확인됨(커밋 `8dcec3d`)
+- [ ] [사람] App Store Connect API 키 발급 (Issuer ID · Key ID · `.p8`)
       - **`.p8` 은 재다운로드 불가.** 받는 즉시 안전한 곳에 원본 보관
-- [ ] [Desktop] 배포 인증서(.p12) + 프로비저닝 프로파일 생성
+      - 키 파일 취급이라 [Desktop] → **[사람]** 으로 소유자를 옮긴다
+- [ ] [사람] 배포 인증서(.p12) + 프로비저닝 프로파일 생성
+      - 같은 이유로 [사람]. Xcode 의 자동 서명을 쓰면 프로파일은 Xcode 가 만든다
 - [ ] [사람] 위 값들을 GitHub Secrets 에 등록 — 이름은 `.github/workflows/ios-release.yml` 상단 주석
 - [ ] [Desktop] Play Console 에 앱 등록 + 업로드 키스토어 생성
 - [ ] [사람] Android Secrets 등록 — `.github/workflows/android-release.yml` 상단 주석
