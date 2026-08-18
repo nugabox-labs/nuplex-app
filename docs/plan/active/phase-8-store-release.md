@@ -169,9 +169,15 @@ Desktop 이 1·2 를 고쳤다.** [Code] 는 같은 파일을 다시 건드리�
 - [ ] [사람] App Store Connect API 키 발급 (Issuer ID · Key ID · `.p8`)
       - **`.p8` 은 재다운로드 불가.** 받는 즉시 안전한 곳에 원본 보관
       - 키 파일 취급이라 [Desktop] → **[사람]** 으로 소유자를 옮긴다
-- [ ] [사람] 배포 인증서(.p12) + 프로비저닝 프로파일 생성
-      - 같은 이유로 [사람]. Xcode 의 자동 서명을 쓰면 프로파일은 Xcode 가 만든다
-- [ ] [사람] 위 값들을 GitHub Secrets 에 등록 — 이름은 `.github/workflows/ios-release.yml` 상단 주석
+- [x] 배포 인증서 + 프로비저닝 프로파일 — **따로 만들 필요 없었다**
+      - `xcodebuild -allowProvisioningUpdates` 가 자동으로 만들었다(로컬 업로드 때 확인).
+        CI 도 API 키를 넘겨 같은 방식으로 처리한다
+- [ ] [사람] GitHub Secrets 4개 등록 — `.github/workflows/ios-release.yml` 상단 주석
+      - `APPSTORE_ISSUER_ID` · `APPSTORE_KEY_ID` · `APPSTORE_PRIVATE_KEY`(.p8 내용)
+      - `GOOGLE_SERVICE_INFO_PLIST`
+      - **인증서(.p12)·프로비저닝 프로파일은 이제 필요 없다.** API 키를 xcodebuild 에
+        넘기면 자동 서명이 CI 에서도 동작한다(커밋 `4ef7a6c`)
+      - 이게 없으면 **매달 도는 TestFlight 갱신이 실패한다** — 90일 만료 방지용이다
 - [ ] [Desktop] Play Console 에 앱 등록 + 업로드 키스토어 생성
 - [ ] [사람] Android Secrets 등록 — `.github/workflows/android-release.yml` 상단 주석
 
