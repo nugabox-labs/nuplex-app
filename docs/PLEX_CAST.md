@@ -3,7 +3,7 @@
 딥링크는 "이 폰에서 재생" 이다. TV로 쏘는 것은 다른 메커니즘 — **Plex Companion** 이다.
 TV 의 Plex 앱이 *플레이어* 로 등록되고, 다른 기기가 그 플레이어에게 재생 명령을 HTTP 로 던진다.
 
-**아직 구현하지 않았다.** 2026-08-20 조사에서 나온 사실만 적는다.
+**아직 구현하지 않았다.** 다만 **명령 형식은 실기기로 검증했다**(2026-08-20, §6).
 
 ## 1. TV 쪽 준비 — "플레이어로 광고" 를 켜야 한다
 
@@ -100,3 +100,66 @@ curl -s -H "X-Plex-Token: $PLEX_TOKEN" -H "X-Plex-Client-Identifier: $PLEX_CLIEN
 
 `provides` 에 `player` 가 있는 `Device` 를 찾고, 그 `Connection` 에 **닿을 수 있는 주소가
 있는지** 본다. 로컬 주소뿐이면 같은 망에서만 쏠 수 있다.
+
+
+## 6. 검증된 명령 형식 (2026-08-20, iPhone → Apple TV 실기기)
+
+폰을 TV 와 같은 WiFi 에 붙이고 브라우저 주소창으로 직접 쏴서 확인했다. **재생됐다.**
+
+```
+GET http://<플레이어IP>:32500/player/playback/playMedia
+  ?address=plex.nugabox.com&port=13394&protocol=https
+  &machineIdentifier=<서버 machineIdentifier>
+  &key=%2Flibrary%2Fmetadata%2F<ratingKey>
+  &offset=0&commandID=<증가하는 정수>
+  &X-Plex-Client-Identifier=<우리 앱 식별자>
+  &X-Plex-Token=<토큰>
+  &X-Plex-Target-Client-Identifier=<플레이어 machineIdentifier>
+```
+
+`X-Plex-*` 는 헤더 대신 **쿼리 파라미터로 보내도 동작한다.**
+
+### 함정 넷 — 전부 실제로 부딪힌 것이다
+
+1. **`X-Plex-Target-Client-Identifier` 는 필수다.** 빼면
+   `400 Error processing player command` 로 죽는다. "직접 연결했으니 대상이 자명하다" 는
+   통하지 않는다
+2. **파라미터 순서를 탄다.** 대상 식별자를 중간에 두었을 때
+   `X-Plex-Target-Client-Identifier header value and my client identifier don't match` 가
+   났고, **값은 완전히 동일했다.** 맨 뒤로 옮기니 통과했다. 값이 틀린 게 아니라 전달이
+   깨진 것이다 — 이 오류 메시지를 곧이곧대로 믿고 ID 를 의심하면 시간을 버린다
+3. **TV 에서 Plex 앱이 떠 있어야 한다.** 다른 앱에 있으면 명령이 아예 먹지 않는다.
+   Companion 서버가 앱 프로세스 안에 있어서다. **깨울 방법이 없다** — 사용자에게
+   "TV 에서 Plex 를 먼저 켜세요" 를 안내하는 수밖에 없다
+4. **플레이어 ID 는 `/resources` 로 확인한다.** 이번엔 plex.tv 등록값과 같았지만
+   같다는 보장이 없다
+
+플레이어가 자기 ID 를 알려주는 곳:
+
+```
+GET http://<플레이어IP>:32500/resources?X-Plex-Token=<토큰>
+→ <Player machineIdentifier="..." protocolCapabilities="playback,playqueues,timeline,provider-playback" .../>
+```
+
+### 멈추기
+
+```
+GET http://<플레이어IP>:32500/player/playback/stop?commandID=<n>
+  &X-Plex-Client-Identifier=<우리 앱 식별자>&X-Plex-Token=<토큰>
+  &X-Plex-Target-Client-Identifier=<플레이어 machineIdentifier>
+```
+
+## 7. 구현 시 걸릴 것 — 플랫폼 제약
+
+**평문 HTTP 로 사설 IP 에 붙는다.** 양 플랫폼 모두 기본 차단이라 설정이 필요하다.
+
+- **iOS**: `NSAppTransportSecurity` 에 `NSAllowsLocalNetworking`.
+  그리고 iOS 14+ 는 **로컬 네트워크 접근에 사용자 권한이 필요하다** —
+  `NSLocalNetworkUsageDescription` 를 Info.plist 에 넣어야 하고, 첫 시도에서
+  권한 다이얼로그가 뜬다. **거부하면 캐스트가 조용히 실패한다**
+- **Android**: targetSdk 28+ 는 평문을 막는다. `network_security_config.xml` 에
+  사설 대역만 열어 준다
+
+**AirPlay 피커는 쓸 수 없다.** `AVRoutePickerView` 는 AVFoundation 재생 경로용이고
+Plex 클라이언트 목록이 아니다. 우리 앱은 네이티브 재생 세션이 없어서 잡힐 것도 없다.
+미러링 피커는 제어 센터 전용이라 호출 API 가 없다. **기기 목록 UI 는 직접 만든다.**
