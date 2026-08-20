@@ -26,7 +26,7 @@ import java.nio.charset.StandardCharsets;
 public class NuplexBridgeApi {
 
     private static final String TAG = "Nuplex";
-    private static final int BRIDGE_VERSION = 1;
+    private static final int BRIDGE_VERSION = 2;
 
     private final Activity activity;
     private final WebView webView;
@@ -143,6 +143,21 @@ public class NuplexBridgeApi {
                 // 세션이 살아 있는 동안 불려야 한다. 로그아웃 뒤에 부르면 401 이다.
                 NuplexTokenRegistrar.unregister(activity);
                 resolve(callId, null);
+                break;
+
+            case "listCastTargets":
+                NuplexCast.listTargets(
+                    args.optJSONArray("candidates"),
+                    args.optString("token", null),
+                    literal -> resolve(callId, literal));
+                break;
+
+            case "castToTarget":
+                NuplexCast.play(args, literal -> resolve(callId, literal));
+                break;
+
+            case "openRoutePicker":
+                NuplexCast.showRoutePicker(activity, literal -> resolve(callId, literal));
                 break;
 
             case "bridgeReady":

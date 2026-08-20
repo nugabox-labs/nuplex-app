@@ -79,6 +79,20 @@
 	<array>
 		<string>plex</string>
 	</array>
+	<!-- TV 캐스트(Plex Companion)는 같은 WiFi 의 사설 IP 에 평문 HTTP 로 붙는다.
+	     docs/PLEX_CAST.md §7. 아래 둘이 없으면 캐스트가 조용히 실패한다.
+	     · NSAllowsLocalNetworking — ATS 가 평문을 막는 것을 사설 대역에 한해 푼다.
+	       전역 NSAllowsArbitraryLoads 와 달리 공용 인터넷은 그대로 막혀 있어
+	       심사에서 사유를 요구받지 않는다.
+	     · NSLocalNetworkUsageDescription — iOS 14+ 는 로컬 네트워크 접근에 사용자
+	       동의를 받는다. 이 문구가 없으면 다이얼로그를 띄우지 못해 요청이 실패한다. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>같은 WiFi 에 있는 TV 를 찾아 재생을 보내기 위해 사용합니다.</string>
 	<!-- 수출 규정(Export Compliance) 응답을 미리 박아 둔다.
 	     셸은 HTTPS 밖의 암호화를 쓰지 않으므로 면제 대상이다.
 	     이걸 빼면 TestFlight 에 올릴 때마다 App Store Connect 에서 사람이 답할

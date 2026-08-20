@@ -27,7 +27,7 @@ export const PUSH_TOKEN_PATH = '/api/app/push/token';
 export const REMOTE_CONFIG_TIMEOUT_MS = 5_000;
 
 /** 브릿지 계약 버전 (§5.1). 새 메서드를 추가할 때만 올린다. */
-export const BRIDGE_VERSION = 1;
+export const BRIDGE_VERSION = 2;
 
 /**
  * Plex 앱 식별자와 스토어 주소.

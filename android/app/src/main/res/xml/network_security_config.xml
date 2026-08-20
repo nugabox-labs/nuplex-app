@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  TV 캐스트(Plex Companion)는 같은 WiFi 의 사설 IP 에 평문 HTTP 로 붙는다.
+  docs/PLEX_CAST.md §7. targetSdk 28+ 는 평문을 기본 차단하므로 여기서 풀어 준다.
+
+  **사설 대역만 연다.** 전역 usesCleartextTraffic 을 켜면 공용 인터넷까지 평문이
+  허용돼 웹뷰가 중간자 공격에 열린다. 아래 목록은 RFC1918 사설 대역이라
+  라우터 밖으로 나가지 않는다.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.0.0/8</domain>
+        <domain includeSubdomains="false">172.16.0.0/12</domain>
+        <domain includeSubdomains="false">192.168.0.0/16</domain>
+    </domain-config>
+</network-security-config>

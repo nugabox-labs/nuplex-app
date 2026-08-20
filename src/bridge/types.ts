@@ -43,6 +43,65 @@ export interface OpenInPlexResult {
   opened: 'app' | 'browser' | 'store';
 }
 
+
+/** TV 캐스트 후보 — 웹이 plex.tv 에서 받아 셸에 넘긴다 (계약 v2). */
+export interface CastCandidate {
+  /** 플레이어의 machineIdentifier. */
+  id: string;
+  /** 사용자에게 보여줄 이름 (예: "거실 Apple TV"). */
+  name: string;
+  /** 플레이어 주소. 사설 IP 다 — 예: `http://192.168.68.111:32500`. */
+  uri: string;
+}
+
+/**
+ * 지금 **실제로 닿는** 플레이어. 셸이 후보를 하나씩 찔러 보고 응답한 것만 담는다.
+ * 목록에 있으면 반드시 눌린다 — 웹은 따로 도달 확인을 하지 않아도 된다.
+ */
+export interface CastTarget {
+  /**
+   * 플레이어가 스스로 보고한 machineIdentifier. **후보의 `id` 와 다를 수 있다** —
+   * plex.tv 등록값과 어긋나는 경우가 있어 셸이 실물 값으로 덮어쓴다.
+   * 재생 요청에는 반드시 이 값을 되돌려줄 것.
+   */
+  id: string;
+  name: string;
+  uri: string;
+}
+
+export interface CastPlayParams {
+  /** listCastTargets 가 돌려준 target 의 `id` · `uri` 를 그대로 넘긴다. */
+  targetId: string;
+  uri: string;
+  /** Plex 계정 토큰. 셸은 보관하지 않고 이 호출에만 쓴다. */
+  token: string;
+  /** 플레이어가 미디어를 받아올 우리 Plex 서버 주소. */
+  serverAddress: string;
+  serverPort: number;
+  serverProtocol: 'http' | 'https';
+  /** Plex 서버의 machineIdentifier. */
+  machineIdentifier: string;
+  ratingKey: string;
+  /** 이어보기 위치(ms). 기본 0. */
+  offset?: number;
+}
+
+export interface CastPlayResult {
+  ok: boolean;
+  /**
+   * 실패 이유. 웹은 이 값으로 안내 문구를 고른다.
+   *
+   * - `unreachable` — 폰이 그 WiFi 를 떠났거나 TV 가 꺼졌다
+   * - `rejected` — 플레이어가 명령을 거절했다. **대개 TV 에서 Plex 앱이 꺼져 있는
+   *   경우다.** Companion 서버가 그 앱 안에 있어 앱이 떠 있어야만 받는다
+   * - `missing-params` · `bad-url` — 웹이 인자를 빠뜨렸다
+   * - `no-bridge` — 브라우저이거나 구버전 셸이다
+   */
+  error?: string;
+  status?: number;
+  detail?: string;
+}
+
 export interface NuplexNative {
   bridgeVersion: number;
   appVersion: string;
@@ -54,6 +113,32 @@ export interface NuplexNative {
   requestPushPermission(): Promise<'granted' | 'denied'>;
   getPushToken(): Promise<string | null>;
   clearPushRegistration(): Promise<void>;
+
+  /**
+   * 후보 중 지금 닿는 플레이어만 골라 돌려준다 (계약 v2).
+   *
+   * **같은 WiFi 에 있을 때만 결과가 나온다.** Plex 플레이어는 사설 IP 하나만
+   * 광고하고 relay 주소가 없어서, 밖에서는 원리적으로 닿지 않는다.
+   * 빈 배열이면 "TV에서 시청" 을 감추면 된다.
+   */
+  listCastTargets(params: {
+    candidates: CastCandidate[];
+    token: string;
+  }): Promise<{ targets: CastTarget[] }>;
+
+  /** 플레이어에 재생을 시킨다 (계약 v2). */
+  castToTarget(params: CastPlayParams): Promise<CastPlayResult>;
+
+  /**
+   * 시스템 화면 공유 피커를 연다 (계약 v2).
+   *
+   * **플랫폼마다 다른 물건이고, 둘 다 한계가 뚜렷하다.**
+   * - iOS: AirPlay 피커. 앱이 네이티브로 재생 중인 것이 없으면 골라도 아무 일이
+   *   일어나지 않는다. 화면 미러링은 제어 센터 전용이라 앱이 시작시킬 수 없다.
+   * - Android: 시스템 캐스트 설정 패널. 목록은 Google Cast 계열이라
+   *   **Apple TV 는 뜨지 않는다.** 기기에 따라 화면 자체가 없을 수 있다.
+   */
+  openRoutePicker(): Promise<{ shown: boolean }>;
 
   openExternal(url: string): Promise<void>;
   setBadgeCount(n: number): Promise<void>;

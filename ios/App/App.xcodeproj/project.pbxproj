@@ -21,6 +21,7 @@
 		A1B2C3D007000000000000B7 /* NuplexTokenRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D007000000000000A7 /* NuplexTokenRegistrar.swift */; };
 		A1B2C3D001000000000000B1 /* NuplexViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D001000000000000A1 /* NuplexViewController.swift */; };
 		A1B2C3D002000000000000B2 /* NuplexBridgeAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D002000000000000A2 /* NuplexBridgeAPI.swift */; };
+		A1B2C3D009000000000000B9 /* NuplexCast.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D009000000000000A9 /* NuplexCast.swift */; };
 		A1B2C3D003000000000000B3 /* NuplexPush.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D003000000000000A3 /* NuplexPush.swift */; };
 		A1B2C3D004000000000000B4 /* NuplexPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D004000000000000A4 /* NuplexPreferences.swift */; };
 		A1B2C3D005000000000000B5 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D005000000000000A5 /* GoogleService-Info.plist */; };
@@ -43,6 +44,7 @@
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		A1B2C3D001000000000000A1 /* NuplexViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuplexViewController.swift; sourceTree = "<group>"; };
 		A1B2C3D002000000000000A2 /* NuplexBridgeAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuplexBridgeAPI.swift; sourceTree = "<group>"; };
+		A1B2C3D009000000000000A9 /* NuplexCast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuplexCast.swift; sourceTree = "<group>"; };
 		A1B2C3D003000000000000A3 /* NuplexPush.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuplexPush.swift; sourceTree = "<group>"; };
 		A1B2C3D004000000000000A4 /* NuplexPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NuplexPreferences.swift; sourceTree = "<group>"; };
 		A1B2C3D005000000000000A5 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -86,6 +88,7 @@
 				A1B2C3D004000000000000A4 /* NuplexPreferences.swift */,
 				A1B2C3D003000000000000A3 /* NuplexPush.swift */,
 				A1B2C3D002000000000000A2 /* NuplexBridgeAPI.swift */,
+				A1B2C3D009000000000000A9 /* NuplexCast.swift */,
 				A1B2C3D001000000000000A1 /* NuplexViewController.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				A1B2C3D008000000000000A8 /* PrivacyInfo.xcprivacy */,
@@ -193,6 +196,7 @@
 				A1B2C3D004000000000000B4 /* NuplexPreferences.swift in Sources */,
 				A1B2C3D003000000000000B3 /* NuplexPush.swift in Sources */,
 				A1B2C3D002000000000000B2 /* NuplexBridgeAPI.swift in Sources */,
+				A1B2C3D009000000000000B9 /* NuplexCast.swift in Sources */,
 				A1B2C3D001000000000000B1 /* NuplexViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

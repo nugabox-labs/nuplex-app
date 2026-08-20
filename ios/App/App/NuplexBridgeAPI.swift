@@ -13,7 +13,7 @@ import FirebaseMessaging
  */
 enum NuplexBridgeAPI {
 
-    static let bridgeVersion = 1
+    static let bridgeVersion = 2
 
     static func handle(
         method: String,
@@ -58,6 +58,18 @@ enum NuplexBridgeAPI {
             NuplexTokenRegistrar.unregister(
                 cookieStore: controller?.webView?.configuration.websiteDataStore.httpCookieStore)
             respond(nil)
+
+        case "listCastTargets":
+            NuplexCast.listTargets(
+                candidates: args["candidates"] as? [[String: Any]] ?? [],
+                token: args["token"] as? String,
+                respond: respond)
+
+        case "castToTarget":
+            NuplexCast.play(args: args, respond: respond)
+
+        case "openRoutePicker":
+            NuplexCast.showRoutePicker(controller: controller, respond: respond)
 
         case "bridgeReady":
             // 주입 성공 로그. 이 줄이 안 보이면 브릿지가 안 붙은 것이다.

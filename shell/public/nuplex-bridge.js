@@ -85,6 +85,19 @@
       return call('clearPushRegistration', {}, undefined);
     },
 
+    // --- TV 캐스트 (계약 v2) ---------------------------------------------
+    // 셸이 없거나 구버전이면 fallback 이 그대로 돌아간다. 웹은 targets 가 비면
+    // "TV에서 시청" 줄을 감추면 된다 — 별도 분기가 필요 없다.
+    listCastTargets: function (params) {
+      return call('listCastTargets', params, { targets: [] });
+    },
+    castToTarget: function (params) {
+      return call('castToTarget', params, { ok: false, error: 'no-bridge' });
+    },
+    openRoutePicker: function () {
+      return call('openRoutePicker', {}, { shown: false });
+    },
+
     openExternal: function (url) {
       return call('openExternal', { url: url }, undefined);
     },
