@@ -283,3 +283,37 @@ Desktop 이 1·2 를 고쳤다.** [Code] 는 같은 파일을 다시 건드리�
 (`[Nuplex] FCM 토큰 수신`, `Preferences` 의 `nuplex.lastRegisteredToken` 에 저장됨).
 `docs/TESTING.md` 가 암시하는 것과 달리 토큰 경로 확인에 실기기가 꼭 필요하지는 않다.
 다만 서버 등록(`POST /api/app/push/token`) 성공 여부는 따로 안 봤다 — **미검증.**
+
+## G. TV 캐스트 1단계 (2026-08-20) [Code]
+
+`docs/PLEX_CAST.md` 에 근거가 있다. **코드는 양 저장소에 들어갔고 빌드까지 통과했다.**
+
+- [x] [Code] 명령 형식을 실기기로 확정 — iPhone 브라우저 → Apple TV 재생 성공
+- [x] [Code] 브릿지 v2 — `listCastTargets` · `castToTarget` · `openRoutePicker`
+      (`ios/App/App/NuplexCast.swift` · `android/.../NuplexCast.java`)
+- [x] [Code] 플랫폼 설정 — iOS `NSAllowsLocalNetworking` + 로컬 네트워크 권한 문구,
+      Android 사설 대역만 여는 `network_security_config.xml`
+- [x] [Code] 웹 — 시청하기 모달(`components/watch-menu.tsx`) + 후보 API
+      (`app/api/app/cast/targets/route.ts`). **커밋만 했고 푸시하지 않았다** —
+      웹 main 푸시는 곧 운영 배포다
+- [ ] [사람] 실기기 확인 — TestFlight 새 빌드 설치 → 같은 WiFi 에서 모달의 TV 항목
+      → 재생. **TV 에서 Plex 앱을 먼저 켜 둘 것**(안 켜면 명령을 못 받는다)
+- [ ] [Code] 웹 배포 (사람 확인 후)
+
+### Desktop 이 알아야 할 것
+
+**`ios/App/App.xcodeproj/project.pbxproj` 를 건드렸다.** `NuplexCast.swift` 를 빌드에
+넣기 위한 파일 참조 4줄 추가뿐이고 서명·Capabilities 는 손대지 않았다.
+Xcode 에서 프로젝트를 열어 두었다면 되읽어야 충돌하지 않는다.
+
+### 미검증 · 남은 위험
+
+- **셸에서의 캐스트는 아직 안 돌려봤다.** 브라우저로 형식만 검증했다. 실기기 확인 전이다
+- **가족 각자의 TV 는 아직 안 보인다.** 후보 목록이 서버 소유자 Plex 계정 기준이라,
+  다른 계정으로 로그인한 TV 는 목록에 없다. 프로필 ↔ Plex 계정 연결이 2단계다
+- **후보 API 응답에 Plex 토큰이 들어간다.** 프로필 관문 뒤지만 계정 전체 권한을 가진
+  값이라 좋은 상태가 아니다. 위 연결 작업이 붙으면 각자의 토큰으로 바뀌며 해소된다
+- **iOS 의 AirPlay 피커는 반쪽이다.** 앱에 네이티브 재생 세션이 없어 골라도 아무 일이
+  일어나지 않는다. "여기서 시청하기"(2단계)가 붙어야 온전해진다
+- 곁가지 — 웹 빌드 결과에 **`/privacy` 가 정적 페이지로 잡힌다.** E절에서 "없다" 고
+  적어 둔 개인정보 처리방침이 생긴 것으로 보인다. **제출 전에 실제 내용을 확인할 것**
