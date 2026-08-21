@@ -10,6 +10,17 @@ name: Android 릴리스
 #   GOOGLE_SERVICES_JSON        Firebase 설정 파일 내용
 #   PLAY_SERVICE_ACCOUNT_JSON   Play Console 서비스 계정 키
 #
+# 서비스 계정 만드는 곳이 **Play Console 이 아니다.** 옛 문서가 말하는
+# `설정 → API 액세스` 메뉴는 이제 없다 — Google 이 개발자 계정을 Cloud 프로젝트에
+# 연결하는 단계를 없앴다. 지금은 이렇게 한다 (2026-08-21 확인):
+#
+#   1. Google Cloud Console 에서 `Google Play Android Developer API` 사용 설정
+#   2. 같은 곳 IAM 및 관리자 → 서비스 계정 → 만들기 (역할은 안 줘도 된다)
+#   3. 키 탭 → 키 추가 → JSON → 이 파일이 PLAY_SERVICE_ACCOUNT_JSON
+#   4. Play Console → **사용자 및 권한 → 새 사용자 초대** 에 그 서비스 계정
+#      이메일(...@....iam.gserviceaccount.com)을 사람처럼 초대하고,
+#      앱 권한에서 NUPLEX 와 테스트 트랙 릴리스 권한을 준다
+#
 # 서명 키는 저장소에 절대 두지 않는다(docs/RELEASE.md).
 
 on:
