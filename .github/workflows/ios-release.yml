@@ -50,13 +50,25 @@ env:
 
 jobs:
   release:
-    runs-on: macos-15
+    # **macos-15 로 내리지 말 것.** 그 이미지의 기본 Xcode 는 16.x(iOS 18.5 SDK)라
+    # 업로드가 이렇게 거부된다:
+    #
+    #     Validation failed (409) SDK version issue. This app was built with the
+    #     iOS 18.5 SDK. All iOS and iPadOS apps must be built with the iOS 26 SDK
+    #     or later …
+    #
+    # 서명·빌드는 다 통과하고 **맨 마지막 업로드에서만** 걸린다 (2026-08-21 실제로 겪음).
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: npm
+
+      # SDK 문제는 로그를 끝까지 봐야 보인다. 어떤 Xcode 로 빌드했는지 먼저 남긴다.
+      - name: Xcode 버전 확인
+        run: xcodebuild -version && xcodebuild -showsdks | grep -i "iphoneos" || true
 
       - name: 필요한 Secrets 확인
         run: |
