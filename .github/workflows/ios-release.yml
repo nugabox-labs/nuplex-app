@@ -16,10 +16,21 @@ name: iOS 릴리스
 #   APPSTORE_PRIVATE_KEY         같은 키의 .p8 파일 내용 그대로
 #   GOOGLE_SERVICE_INFO_PLIST    Firebase 설정 파일 내용
 #
+# **API 키의 액세스 권한은 반드시 `Admin` 이어야 한다.**
+# `App Manager` 로는 안 된다 — 내보내기 단계에서 이렇게 끝난다:
+#
+#     error: exportArchive Cloud signing permission error
+#     error: exportArchive No signing certificate "iOS Distribution" found
+#
+# 클라우드 관리 배포 인증서에 접근하는 권한이 Admin 에만 열려 있기 때문이다
+# (2026-08-21 실제로 겪음). 아카이브까지는 통과하고 내보내기에서 걸리므로
+# 로그를 끝까지 봐야 보인다.
+#
 # **인증서(.p12)와 프로비저닝 프로파일은 넣지 않는다.** API 키를 xcodebuild 에
 # 넘기면(-authenticationKey*) 자동 서명이 CI 에서도 동작해 필요한 인증서와
-# 프로파일을 알아서 만들고 받아온다. 예전 주석은 .p12 를 요구했지만, 키 파일을
-# 사람이 내보내 base64 로 옮기는 단계가 통째로 사라지는 편이 낫다.
+# 프로파일을 알아서 만들고 받아온다. 사람이 키 파일을 내보내 base64 로 옮기는
+# 단계가 사라지는 대신, 키 권한이 Admin 이어야 한다는 조건이 붙는다.
+# 그 조건이 싫으면 .p12 + 프로파일을 시크릿으로 넣는 방식으로 되돌리면 된다.
 #
 # .p8 은 재다운로드가 불가능하다. 안전한 곳에 원본을 보관할 것.
 

@@ -174,6 +174,9 @@ Desktop 이 1·2 를 고쳤다.** [Code] 는 같은 파일을 다시 건드리�
         CI 도 API 키를 넘겨 같은 방식으로 처리한다
 - [ ] [사람] GitHub Secrets 4개 등록 — `.github/workflows/ios-release.yml` 상단 주석
       - `APPSTORE_ISSUER_ID` · `APPSTORE_KEY_ID` · `APPSTORE_PRIVATE_KEY`(.p8 내용)
+      - **API 키 권한은 `Admin` 이어야 한다.** `App Manager` 로 만들면 내보내기에서
+        `Cloud signing permission error` · `No signing certificate "iOS Distribution" found`
+        로 끝난다. 클라우드 관리 배포 인증서 접근이 Admin 에만 열려 있다 (2026-08-21 확인)
       - `GOOGLE_SERVICE_INFO_PLIST`
       - **인증서(.p12)·프로비저닝 프로파일은 이제 필요 없다.** API 키를 xcodebuild 에
         넘기면 자동 서명이 CI 에서도 동작한다(커밋 `4ef7a6c`)
