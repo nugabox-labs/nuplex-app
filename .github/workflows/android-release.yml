@@ -8,7 +8,7 @@ name: Android 릴리스
 #   ANDROID_KEY_ALIAS
 #   ANDROID_KEY_PASSWORD
 #   GOOGLE_SERVICES_JSON        Firebase 설정 파일 내용
-#   PLAY_SERVICE_ACCOUNT_JSON   Play Console 서비스 계정 키
+#   PLAY_SERVICE_ACCOUNT_JSON   Play Console 서비스 계정 키 (내부 테스트 업로드에 필요)
 #
 # 서비스 계정 만드는 곳이 **Play Console 이 아니다.** 옛 문서가 말하는
 # `설정 → API 액세스` 메뉴는 이제 없다 — Google 이 개발자 계정을 Cloud 프로젝트에
@@ -90,14 +90,18 @@ jobs:
           name: aab
           path: android/app/build/outputs/bundle/release/*.aab
 
-      # TODO: Play Console 업로드. 앱을 한 번은 콘솔에서 수동으로 올려 등록해야
-      #       서비스 계정 업로드가 동작한다. 등록 후 아래 주석을 푼다.
-      # - uses: r0adkll/upload-google-play@v1
-      #   with:
-      #     serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-      #     packageName: com.nugabox.nuplex
-      #     releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
-      #     track: internal
+      # Play API 는 **그 패키지의 첫 릴리스를 만들지 못한다.** 콘솔에서 사람이 한 번
+      # 올려 앱을 살려 놔야 그 뒤부터 서비스 계정 업로드가 통한다.
+      # 2026-08-25 에 내부 테스트로 수동 업로드를 마쳐서 이 단계를 켰다.
+      #
+      # track: internal — 내부 테스트 트랙. 심사를 타지 않고 테스터에게 바로 간다.
+      # status 기본값이 completed 라 올라가는 즉시 그 트랙에 배포된다.
+      - uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.nugabox.nuplex
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: internal
 
       - name: 시크릿 파일 정리
         if: always()
