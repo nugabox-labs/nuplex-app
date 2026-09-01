@@ -92,10 +92,11 @@ Desktop 은 GUI 를 쓸 수 있으니 이어받는다.
 사용자에게는 손해다. 되돌리려면 그 값만 빼면 된다 — 포커스 확대는 `maximum-scale=1`
 이 계속 막는다.
 
-- [ ] [Desktop] **미검증 — 시뮬레이터에서 확인할 것.** 프로필 이메일 입력창을 눌러
-      화면이 커지지 않는지, 그리고 헤더가 상태바를 침범하지 않는지(안전영역이 살아
-      있는지) 둘 다 본다. Code 는 시뮬레이터를 탭할 수 없다(CLAUDE.md §2.1)
+- [ ] [Desktop] **미검증 — 확인할 것.** 프로필 이메일 입력창을 눌러 화면이 커지지
+      않는지, 그리고 헤더가 상태바를 침범하지 않는지(안전영역이 살아 있는지) 둘 다 본다.
+      Code 는 시뮬레이터를 탭할 수 없다(CLAUDE.md §2.1)
       - 확인한 것은 Swift 파싱과 주입 스크립트 문법, 그리고 CI 컴파일까지다
+      - **TestFlight 빌드 `108`** 에 들어갔다. 실기기로도 볼 수 있다
 
 ### A-0. 이번에 나온 세 건
 
@@ -288,8 +289,12 @@ Developer"` 를 박아 뒀다(`ios/App/App.xcodeproj/project.pbxproj:313`). 그�
       - 확인한 것: `UPLOAD SUCCEEDED with no errors`,
         `Authority=Apple Distribution: Nuga Jang (U5796QB9C8)`,
         권한에 `aps-environment = production` · `beta-reports-active`
-      - **미검증**: TestFlight 에서 처리 완료됐는지, 새 내부 그룹에 실제로 배포됐는지.
-        화면 확인이 필요하다 → [Desktop]
+      - `107` 은 새 내부 그룹에 자동 배포됐다. **테스터 전원에게 새 빌드 메일이 갔다**
+        (사람이 확인). 그룹에 빌드가 한 번 붙은 뒤로는 나중에 추가한 테스터도 바로
+        그 빌드를 받는다 — 사람을 넣을 때마다 새 빌드를 올릴 필요는 없다
+- [x] [Code] 빌드 `108` 업로드 — 2026-09-01. A-3 의 입력창 확대 막기가 들어간 첫 빌드
+      - 같은 확인 통과: `UPLOAD SUCCEEDED with no errors`,
+        `aps-environment = production`, `Authority=Apple Distribution`
 - [x] [Desktop] App Store Connect → TestFlight 에서 빌드 처리 완료 확인
       - `1.0.0 (1)` — 처리 중 → **테스트 준비 완료**, 90일 후 만료
 - [x] [Desktop] 수출 규정(Export Compliance) — Info.plist 에 면제 선언을 박아 해결
