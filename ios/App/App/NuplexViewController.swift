@@ -31,7 +31,119 @@ class NuplexViewController: CAPBridgeViewController {
 
         installBridge()
         installNavigationProxy()
+        installZoomGuard()
     }
+
+    /**
+     입력창을 누를 때 화면이 확대되는 것을 막는다.
+
+     iOS 만의 동작이다. WKWebView 는 글자 크기가 16px 보다 작은 입력창에 포커스가
+     가면 **읽을 수 있는 크기까지 화면을 확대한다.** 확대된 배율은 포커스가 풀려도
+     돌아오지 않아서, 한 번 입력하면 그 뒤로 화면 전체가 커진 채로 남는다.
+     Android WebView 에는 이 동작이 없다.
+
+     이걸 통제하는 방법은 **뷰포트의 배율 상한 하나뿐이다.** 네이티브 쪽 확대/축소
+     설정으로는 막히지 않는다 — 포커스 확대는 스크롤 뷰의 줌이 아니라 WebKit 이
+     직접 하는 것이라서다. 그래서 뷰포트 메타를 문서 시작 시점에 덮어쓴다.
+
+     **한 번 넣고 끝나지 않는다.** 원격 웹은 Next.js 라 자기 뷰포트 메타를 나중에
+     붙이고, 화면을 옮길 때 다시 쓸 수도 있다. 그래서 감시자를 달아 값이 바뀌면
+     되돌린다. 같은 값이면 다시 쓰지 않으므로 감시자가 자기 변경에 다시 불려
+     무한히 도는 일은 없다.
+
+     `viewport-fit=cover` 를 유지하는 것이 중요하다 — 이게 빠지면 안전영역이 죽어
+     상태바에 헤더가 깔린다(phase-8 A-0-2 에서 한 번 겪은 문제다).
+
+     **대가를 적어 둔다.** `user-scalable=no` 는 손가락으로 벌려 키우는 것까지 막는다.
+     시력이 낮은 사용자에게는 손해다. 입력창 확대를 전부 막아 달라는 요청이라
+     이렇게 했지만, 되돌린다면 이 줄에서 `user-scalable=no` 만 빼면 된다
+     (그러면 포커스 확대는 `maximum-scale=1` 이 계속 막는다).
+     */
+    private func installZoomGuard() {
+        guard let controller = webView?.configuration.userContentController else { return }
+        controller.addUserScript(
+            WKUserScript(
+                source: Self.zoomGuardScript, injectionTime: .atDocumentStart,
+                forMainFrameOnly: true))
+
+        // 손가락으로 벌리는 확대. 위 뷰포트로도 막히지만, 웹이 뷰포트를 덮어쓴
+        // 찰나에 열리지 않도록 스크롤 뷰 쪽도 함께 닫는다.
+        webView?.scrollView.bouncesZoom = false
+        webView?.scrollView.pinchGestureRecognizer?.isEnabled = false
+    }
+
+    /// 주입할 스크립트. 브릿지와 달리 iOS 전용이라 `shell/public/` 로 빼지 않았다 —
+    /// 파일로 두면 `npm run sync` 를 거르는 순간 조용히 사라진다.
+    ///
+    /// ES5 문법만 쓴다. 브릿지 스크립트와 같은 이유는 아니고(여긴 iOS 뿐이다)
+    /// 옆 파일과 결을 맞추기 위함이다.
+    private static let zoomGuardScript = """
+        (function () {
+          'use strict';
+
+          var CONTENT =
+            'width=device-width, initial-scale=1, maximum-scale=1, ' +
+            'user-scalable=no, viewport-fit=cover';
+
+          var observer = null;
+          var watchingHead = false;
+
+          function apply() {
+            var host = document.head || document.documentElement;
+            if (!host) return;
+
+            var meta = document.querySelector('meta[name="viewport"]');
+            if (!meta) {
+              meta = document.createElement('meta');
+              meta.setAttribute('name', 'viewport');
+              host.appendChild(meta);
+            }
+            // 같은 값이면 건드리지 않는다. 감시자가 자기 변경에 다시 불리지 않게 한다.
+            if (meta.getAttribute('content') !== CONTENT) {
+              meta.setAttribute('content', CONTENT);
+            }
+
+            // 글자만 부풀리는 iOS 의 자동 확대도 함께 끈다. 좁은 칸이나 가로 화면에서
+            // 본문 글자 크기가 제멋대로 커지는 동작이다.
+            if (document.documentElement) {
+              document.documentElement.style.webkitTextSizeAdjust = '100%';
+            }
+          }
+
+          function observe(target, options) {
+            if (observer) observer.disconnect();
+            observer = new MutationObserver(onMutation);
+            observer.observe(target, options);
+          }
+
+          // head 가 생기면 감시 범위를 거기로 좁힌다. 문서 전체를 계속 보면
+          // React 가 노드를 바꿀 때마다 불려 낭비가 크다.
+          function narrowToHead() {
+            if (watchingHead || !document.head) return;
+            watchingHead = true;
+            observe(document.head, {
+              childList: true,
+              subtree: true,
+              attributes: true,
+              attributeFilter: ['content'],
+            });
+          }
+
+          function onMutation() {
+            apply();
+            narrowToHead();
+          }
+
+          apply();
+          narrowToHead();
+
+          // head 가 아직 없다면 그것이 생기는 것부터 지켜본다. DOMContentLoaded 를
+          // 기다리면 그사이 웹이 붙인 뷰포트가 잠깐 살아 있게 된다.
+          if (!watchingHead && document.documentElement) {
+            observe(document.documentElement, { childList: true, subtree: true });
+          }
+        })();
+        """
 
     /**
      window.NuplexNative 를 원격 페이지에 주입한다 (ADR-004).
