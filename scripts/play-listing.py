@@ -17,10 +17,13 @@ Play Console 의 애셋 업로드는 OS 파일 선택창을 띄운다. 브라우
 
 ## 두 단계로 나눈 이유
 
-`commit` 은 되돌릴 수 없다. 그리고 이미지만 올려도 같은 edit 안의 텍스트가 함께
-반영되므로, 콘솔에 저장해 둔 문구를 모르고 덮어쓸 위험이 있다. 그래서 먼저
-`inspect` 로 현재 값을 그대로 읽어 눈으로 확인하고, `apply` 는 **읽은 텍스트를 손대지
-않은 채** 이미지만 바꾼다.
+`commit` 은 되돌릴 수 없다. 그래서 먼저 `inspect` 로 지금 게시된 값을 그대로 읽어
+무엇이 바뀌는지 보고, 그다음 `apply` 로 넘어간다.
+
+**새 edit 은 콘솔의 임시보관함이 아니라 "게시된" 값에서 시작한다.** 처음 돌렸을 때
+콘솔에는 709자짜리 설명이 보이는데 API 로는 빈 문자열이었다. 이 상태에서 이미지만
+올리고 커밋했다면 빈 설명이 그대로 게시될 뻔했다. 그래서 텍스트도 저장소에 두고
+`apply` 가 매번 함께 넣는다.
 """
 
 from __future__ import annotations
@@ -43,6 +46,16 @@ SCOPE = "https://www.googleapis.com/auth/androidpublisher"
 ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "resources" / "store" / "play"
 
+# 텍스트도 저장소에 둔다. 콘솔에만 있으면 무엇이 올라가 있는지 코드로 알 수 없고,
+# API 로 이미지를 커밋할 때 실수로 비워 버릴 수 있다(2026-09-01 실제로 겪을 뻔했다 —
+# 새 edit 은 **게시된** 값에서 시작하는데 그때 설명이 비어 있었다).
+TITLE = "NUPLEX"
+SHORT_DESCRIPTION = "초대받은 사람들이 함께 쓰는 Plex 서버의 영화·드라마를 둘러보고 바로 재생합니다."
+FULL_DESCRIPTION_FILE = ASSETS / "listing-ko.txt"
+
+# Play 가 받는 상한. 넘으면 API 가 거절하기 전에 여기서 잡는다.
+LIMITS = {"title": 30, "shortDescription": 80, "fullDescription": 4000}
+
 # imageType → 올릴 파일. phoneScreenshots 는 순서가 스토어 노출 순서가 된다.
 IMAGES: dict[str, list[Path]] = {
     "icon": [ASSETS / "icon-512.png"],
@@ -61,7 +74,9 @@ def token() -> str:
 
 
 def call(method: str, url: str, tok: str, body: bytes | None = None,
-         content_type: str | None = None) -> dict:
+         content_type: str | None = None, tolerate_404: bool = False) -> dict:
+    """`tolerate_404` — 아직 이미지가 하나도 없는 종류는 조회·삭제가 404 로 온다.
+    그건 오류가 아니라 "없다" 는 뜻이라 빈 값으로 넘긴다."""
     req = urllib.request.Request(url, data=body, method=method)
     req.add_header("Authorization", f"Bearer {tok}")
     if content_type:
@@ -71,6 +86,8 @@ def call(method: str, url: str, tok: str, body: bytes | None = None,
             payload = res.read()
             return json.loads(payload) if payload else {}
     except urllib.error.HTTPError as e:
+        if e.code == 404 and tolerate_404:
+            return {}
         detail = e.read().decode("utf-8", "replace")
         raise SystemExit(f"{method} {url}\n  HTTP {e.code}\n  {detail}") from e
 
@@ -102,6 +119,7 @@ def main() -> None:
             "GET",
             f"{BASE}/applications/{PACKAGE}/edits/{edit_id}/images/{LANGUAGE}/{kind}",
             tok,
+            tolerate_404=True,
         )
         print(f"{kind}: {len(got.get('images', []))}장")
     print()
@@ -111,6 +129,22 @@ def main() -> None:
         call("DELETE", f"{BASE}/applications/{PACKAGE}/edits/{edit_id}", tok)
         print("읽기만 하고 edit 을 버렸다. 바뀐 것은 없다.")
         return
+
+    full_new = FULL_DESCRIPTION_FILE.read_text(encoding="utf-8").rstrip("\n")
+    listing_new = {
+        "language": LANGUAGE,
+        "title": TITLE,
+        "shortDescription": SHORT_DESCRIPTION,
+        "fullDescription": full_new,
+    }
+    for field, limit in LIMITS.items():
+        if len(listing_new[field]) > limit:
+            raise SystemExit(f"{field} 가 {len(listing_new[field])}자로 상한 {limit}자를 넘는다")
+
+    print("── 넣을 텍스트 ──")
+    for field in LIMITS:
+        print(f"{field}: {len(listing_new[field])}자")
+    print()
 
     print("── 올릴 것 ──")
     for kind, paths in IMAGES.items():
@@ -126,6 +160,7 @@ def main() -> None:
             "DELETE",
             f"{BASE}/applications/{PACKAGE}/edits/{edit_id}/images/{LANGUAGE}/{kind}",
             tok,
+            tolerate_404=True,
         )
         for p in paths:
             call(
@@ -138,8 +173,17 @@ def main() -> None:
             )
             print(f"올림: {kind} ← {p.name}")
 
+    call(
+        "PUT",
+        f"{BASE}/applications/{PACKAGE}/edits/{edit_id}/listings/{LANGUAGE}",
+        tok,
+        body=json.dumps(listing_new).encode("utf-8"),
+        content_type="application/json",
+    )
+    print("텍스트를 넣었다.")
+
     call("POST", f"{BASE}/applications/{PACKAGE}/edits/{edit_id}:commit", tok)
-    print("\ncommit 했다. 텍스트는 읽은 그대로 두었고 이미지만 바꿨다.")
+    print("\ncommit 했다.")
 
 
 if __name__ == "__main__":
