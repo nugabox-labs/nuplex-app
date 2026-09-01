@@ -124,21 +124,38 @@ jobs:
       # Apple Distribution has been manually specified` 로 끝난다. 자동 서명은 아카이브
       # 단계에서 개발 서명을 고집한다.
       #
-      # 그래서 아카이브는 서명 없이 만들고 배포 서명은 내보내기에만 맡긴다. 인증서를
-      # 한 장도 만들지 않으므로 한도와 무관해진다. pbxproj 는 Desktop 소유 영역이라
-      # (CLAUDE.md §2.2-6) 여기서 빌드 설정으로만 덮는다.
+      # **서명을 아예 끄는 방법도 안 된다.** `CODE_SIGNING_ALLOWED=NO` 로 아카이브하면
+      # 빌드와 내보내기는 통과하지만 나온 IPA 의 권한이 이렇게만 남는다 (2026-09-01 확인):
+      #
+      #     application-identifier · beta-reports-active
+      #     com.apple.developer.team-identifier · get-task-allow
+      #
+      # `aps-environment` 가 없다 = **푸시를 못 받는 빌드**다. 서명이 없으면 권한이
+      # 아카이브에 박히지 않고, 내보내기는 이 앱에 푸시가 필요하다는 사실을 알 길이 없다.
+      # 아래 "서명·권한 확인" 단계가 여기서 잡아냈다.
+      #
+      # 그래서 **애드혹 서명**으로 아카이브한다. `CODE_SIGN_IDENTITY="-"` 는 인증서도
+      # 프로파일도 요구하지 않으면서 `App.entitlements` 를 아카이브에 심는다. 내보내기가
+      # 그걸 보고 배포 인증서와 App Store 프로파일로 다시 서명한다. 개발 인증서는
+      # 한 장도 만들지 않으므로 계정 한도와 무관하다.
+      #
+      # `CODE_SIGN_STYLE=Manual` 을 함께 넘겨야 한다 — 자동 서명인 채로 신원만 바꾸면
+      # SPM 타깃들이 `requires a development team` 으로 멈춘다.
+      # pbxproj 는 Desktop 소유 영역이라(CLAUDE.md §2.2-6) 여기서 빌드 설정으로만 덮는다.
       - name: 아카이브
         working-directory: ios/App
         run: |
           xcodebuild -scheme App -configuration Release \
             -destination "generic/platform=iOS" \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="-" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            PROVISIONING_PROFILE_SPECIFIER="" \
             archive
 
-      # 서명은 전부 여기서 붙는다 — 배포 인증서와 App Store 프로파일 모두.
+      # 진짜 서명은 여기서 붙는다 — 배포 인증서와 App Store 프로파일 모두.
+      # 애드혹 아카이브의 권한(`aps-environment` 등)을 읽어 그대로 옮겨 준다.
       # -allowProvisioningUpdates 가 있어야 한다(ios/App/exportOptions.plist 주석).
       # 배포 인증서는 클라우드 관리라 Apple 이 대신 들고 있어 개발 인증서 한도와 무관하다.
       - name: IPA 내보내기
