@@ -52,7 +52,8 @@ jobs:
         env:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
 
-      - run: pip install --quiet google-auth
+      # requests 는 google-auth 의 전송 계층이 요구한다. 빼면 ImportError 로 끝난다.
+      - run: pip install --quiet google-auth requests
 
       - name: 등록정보 ${{ inputs.mode }}
         run: python3 scripts/play-listing.py "$MODE"
