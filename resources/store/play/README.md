@@ -22,5 +22,38 @@ f.save('resources/store/play/feature-1024x500.png')
 PY
 ```
 
-**스크린샷은 여기 없다.** 2~8장이 필요한데 로그인된 화면이어야 해서 실기기에서 찍는다
-(에뮬레이터에는 세션이 없다). `docs/plan/active/phase-8-store-release.md` H절 참고.
+## 스크린샷 (`screenshots/`)
+
+| 파일 | 무엇 |
+| --- | --- |
+| `01-welcome.png` | 웹 입장 화면 (`/welcome`) |
+| `02-onboarding.png` | 셸의 알림 권한 화면 (`shell/onboarding.html`) |
+| `03-offline.png` | 셸의 오프라인 화면 (`shell/offline.html`) |
+| `04-privacy.png` | 개인정보 처리방침 (`/privacy`) |
+
+넷 다 1080×1920(9:16)이다. Play 는 2~8장을 받고, 각 변이 1,080px 이상인 것이 4장
+이상이어야 프로모션 대상이 된다.
+
+**로그인이 필요한 화면은 쓰지 않았다.** `/profile` 은 실제 이용자들의 이름과 프로필
+사진이 그대로 나온다 — 내부용이라도 스토어에 올릴 것이 아니다. `/guide` 는 화면
+한가운데에 "VPN 설치 → 지역을 미국으로" 절차가 있어 뺐다.
+
+만드는 법 — 헤드리스 Chrome 으로 찍는다. `--force-device-scale-factor=2` 라
+540×960 뷰포트가 1080×1920 으로 나온다.
+
+```bash
+CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+"$CHROME" --headless=new --disable-gpu --hide-scrollbars \
+  --window-size=540,960 --force-device-scale-factor=2 --virtual-time-budget=8000 \
+  --screenshot=resources/store/play/screenshots/01-welcome.png \
+  https://nuplex.nugabox.com/welcome
+```
+
+셸 자체 화면(`02`·`03`)은 `shell/*.html` 과 `shell/public/styles/` 를 한 폴더에 모아
+정적 서버로 띄운 뒤 같은 방법으로 찍는다.
+
+## 올리는 법
+
+**손으로 올리지 않는다.** 콘솔의 애셋 업로드는 OS 파일 선택창을 띄워서 자동화가
+닿지 않는다. `.github/workflows/play-listing.yml` 을 `workflow_dispatch` 로 돌린다 —
+`inspect` 로 현재 값을 먼저 보고, `apply` 로 반영한다.
