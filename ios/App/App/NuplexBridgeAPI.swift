@@ -81,9 +81,13 @@ enum NuplexBridgeAPI {
             NuplexPush.flush { route in controller?.navigate(toRoute: route) }
             // 웹이 준비됐다는 것은 로그인·프로필 선택을 마쳤다는 뜻이다. 토큰 등록에
             // 필요한 세션 쿠키가 이제야 생겼으므로 여기서 등록을 시도한다.
+            //
+            // **토큰이 같아도 매번 보낸다.** 서버는 이 요청의 쿠키로 기기의 프로필을
+            // 정하는데 계정을 바꿔도 FCM 토큰은 그대로다. 건너뛰면 기기가 이전
+            // 프로필에 묶인 채 남는다(docs/plan/active/phase-9-push-badge.md 결함 D).
             Messaging.messaging().token { token, _ in
                 guard let token else { return }
-                NuplexTokenRegistrar.registerIfChanged(
+                NuplexTokenRegistrar.register(
                     token: token,
                     cookieStore: controller?.webView?.configuration.websiteDataStore.httpCookieStore)
             }

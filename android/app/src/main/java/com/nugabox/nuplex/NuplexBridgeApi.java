@@ -324,13 +324,20 @@ public class NuplexBridgeApi {
      *
      * 이 시점이어야 하는 이유: /api/app/push/token 은 인증 게이트 뒤에 있는데,
      * 로그인·프로필 선택을 마치기 전에는 세션 쿠키가 없어 401 이 된다.
+     *
+     * **토큰이 같아도 매번 보낸다.** 서버는 이 요청의 쿠키를 보고 기기의 프로필을
+     * 정하는데(nuplex/app/api/app/push/token/route.ts), 계정을 바꿔도 FCM 토큰은
+     * 그대로다. 전에 쓰던 registerIfChanged 는 그럴 때 요청을 통째로 건너뛰어
+     * 기기가 이전 프로필에 묶인 채 남았다 — 다음 사람이 이전 사람 앞으로 온 공지를
+     * 받았다(docs/plan/active/phase-9-push-badge.md 결함 D).
+     * 앱을 켤 때 POST 한 번이 늘어날 뿐이고, 그 대가로 대상이 항상 맞는다.
      */
     private void registerPushTokenIfPossible() {
         try {
             com.google.firebase.messaging.FirebaseMessaging.getInstance().getToken()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful() && task.getResult() != null) {
-                        NuplexTokenRegistrar.registerIfChanged(activity, task.getResult());
+                        NuplexTokenRegistrar.register(activity, task.getResult());
                     }
                 });
         } catch (Exception e) {

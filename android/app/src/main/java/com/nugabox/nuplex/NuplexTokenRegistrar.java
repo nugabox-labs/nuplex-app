@@ -33,7 +33,6 @@ final class NuplexTokenRegistrar {
     private static final String TAG = "Nuplex";
     private static final String PREFS = "nuplex_push";
     private static final String KEY_DEVICE_ID = "device_id";
-    private static final String KEY_LAST_TOKEN = "last_registered_token";
 
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
 
@@ -53,13 +52,14 @@ final class NuplexTokenRegistrar {
         return id;
     }
 
-    /** 이미 등록한 토큰과 같으면 건너뛴다. 부팅할 때마다 같은 요청을 보낼 이유가 없다. */
-    static void registerIfChanged(Context context, String token) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        if (token.equals(prefs.getString(KEY_LAST_TOKEN, null))) return;
-        register(context, token);
-    }
-
+    /**
+     * 등록한다. **토큰이 전과 같아도 보낸다.**
+     *
+     * 예전에는 같은 토큰이면 건너뛰었다. 그런데 서버는 이 요청의 쿠키를 보고 기기가
+     * 어느 프로필의 것인지 정하는데, 계정을 바꿔도 FCM 토큰은 그대로다. 그래서
+     * 건너뛰면 기기가 이전 프로필에 묶인 채 남아, 다음 사람이 이전 사람 앞으로 온
+     * 공지를 받았다(docs/plan/active/phase-9-push-badge.md 결함 D).
+     */
     static void register(Context context, String token) {
         executor.execute(() -> {
             try {
@@ -73,8 +73,6 @@ final class NuplexTokenRegistrar {
 
                 int status = send(context, "POST", body.toString());
                 if (status >= 200 && status < 300) {
-                    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                        .edit().putString(KEY_LAST_TOKEN, token).apply();
                     Log.i(TAG, "푸시 토큰 등록 완료");
                 } else if (status == 401 || status == 403 || (status >= 300 && status < 400)) {
                     // 아직 로그인 전이다. 인증 게이트가 401 대신 /login 으로 리다이렉트(307)
@@ -99,9 +97,6 @@ final class NuplexTokenRegistrar {
                 Log.i(TAG, "푸시 토큰 해제 (" + status + ")");
             } catch (Exception e) {
                 Log.w(TAG, "푸시 토큰 해제 중 오류", e);
-            } finally {
-                context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                    .edit().remove(KEY_LAST_TOKEN).apply();
             }
         });
     }
