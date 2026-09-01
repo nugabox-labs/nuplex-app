@@ -41,14 +41,17 @@ PACKAGE = "com.nugabox.nuplex"
 LANGUAGE = "ko-KR"
 BASE = "https://androidpublisher.googleapis.com/androidpublisher/v3"
 
-# **업로드 호스트가 둘이다.** `androidpublisher.googleapis.com/upload/...` 는
-# `Could not find handler for this request` 로 404 가 난다(2026-09-01 확인).
-# 미디어 업로드는 `www.googleapis.com` 쪽에 붙어 있다. 어느 쪽이 통했는지 로그에
-# 남기려고 목록으로 둔다 — 나중에 반대로 바뀌어도 바로 보인다.
-UPLOAD_HOSTS = [
-    "https://www.googleapis.com/upload/androidpublisher/v3",
-    "https://androidpublisher.googleapis.com/upload/androidpublisher/v3",
-]
+UPLOAD = "https://androidpublisher.googleapis.com/upload/androidpublisher/v3"
+
+# **이미지는 `listings/` 아래에 있다. `images/` 가 아니다.**
+# 이름이 `edits.images` 라 경로도 `images/` 일 것 같지만 아니다 — 두 번 헤맸다
+# (`Could not find handler for this request` 404, 2026-09-01). 확실한 근거는
+# 디스커버리 문서다. 인증 없이 받아 볼 수 있으니 다음에 막히면 추측하지 말 것:
+#
+#     curl -s "https://androidpublisher.googleapis.com/\$discovery/rest?version=v3" \
+#       | python3 -c "import json,sys; d=json.load(sys.stdin); \
+#           print(d['resources']['edits']['resources']['images']['methods'])"
+IMAGE_PATH = "listings"
 SCOPE = "https://www.googleapis.com/auth/androidpublisher"
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -125,7 +128,7 @@ def main() -> None:
     for kind in IMAGES:
         got = call(
             "GET",
-            f"{BASE}/applications/{PACKAGE}/edits/{edit_id}/images/{LANGUAGE}/{kind}",
+            f"{BASE}/applications/{PACKAGE}/edits/{edit_id}/{IMAGE_PATH}/{LANGUAGE}/{kind}",
             tok,
             tolerate_404=True,
         )
@@ -166,21 +169,20 @@ def main() -> None:
         # 같은 것을 두 번 올려 쌓이지 않게 먼저 비운다.
         call(
             "DELETE",
-            f"{BASE}/applications/{PACKAGE}/edits/{edit_id}/images/{LANGUAGE}/{kind}",
+            f"{BASE}/applications/{PACKAGE}/edits/{edit_id}/{IMAGE_PATH}/{LANGUAGE}/{kind}",
             tok,
             tolerate_404=True,
         )
         for p in paths:
-            body = p.read_bytes()
-            for i, host in enumerate(UPLOAD_HOSTS):
-                url = (f"{host}/applications/{PACKAGE}/edits/{edit_id}"
-                       f"/images/{LANGUAGE}/{kind}?uploadType=media")
-                last = i == len(UPLOAD_HOSTS) - 1
-                got = call("POST", url, tok, body=body,
-                           content_type="image/png", tolerate_404=not last)
-                if got or last:
-                    print(f"올림: {kind} ← {p.name}  ({host.split('/')[2]})")
-                    break
+            call(
+                "POST",
+                f"{UPLOAD}/applications/{PACKAGE}/edits/{edit_id}"
+                f"/{IMAGE_PATH}/{LANGUAGE}/{kind}?uploadType=media",
+                tok,
+                body=p.read_bytes(),
+                content_type="image/png",
+            )
+            print(f"올림: {kind} ← {p.name}")
 
     call(
         "PUT",
