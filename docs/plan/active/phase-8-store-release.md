@@ -193,12 +193,51 @@ Desktop 이 1·2 를 고쳤다.** [Code] 는 같은 파일을 다시 건드리�
       - `method: app-store-connect`, `teamID: U5796QB9C8`, 자동 서명
       - **아카이브는 개발 인증서로 서명돼 나온다.** 배포 서명은 내보내기 단계에서 붙으므로
         `xcodebuild -exportArchive` 에 `-allowProvisioningUpdates` 를 반드시 함께 넘긴다
-- [ ] [Code] `ios-release.yml` 의 IPA 내보내기·업로드 주석 해제
+- [x] [Code] `ios-release.yml` 의 IPA 내보내기·업로드 주석 해제
       (CI 는 GitHub Secrets 의 인증서·API 키가 있어야 돌아간다)
 - [ ] [Code] `assetlinks.json` — App Links 검증용. **업로드 키의 SHA-256 지문이 필요**하므로
       B 이후에 가능. `nuplex` 웹의 `/.well-known/` 에 배포한다
 - [x] [Code] CI iOS 잡이 `GoogleService-Info.plist` 부재로 실패하던 것 수정
       (자리표시자 생성. 로컬에서 exit 65 재현 → 수정 후 BUILD SUCCEEDED 확인)
+
+### C-1. CI 아카이브가 개발 인증서를 태워 없앤 건 (2026-09-01) [Code]
+
+**증상.** run #4 아카이브가 exit 65 로 끝났다 —
+`Choose a certificate to revoke. Your account has reached the maximum number of
+certificates.` + `No profiles for 'com.nugabox.nuplex' were found`.
+
+**원인.** Capacitor 템플릿이 **Release 구성에까지** `CODE_SIGN_IDENTITY = "iPhone
+Developer"` 를 박아 뒀다(`ios/App/App.xcodeproj/project.pbxproj:313`). 그래서 아카이브가
+*개발* 인증서를 요구하는데, 러너는 매번 새 머신이라 키체인이 비어 있고
+`-allowProvisioningUpdates` 가 실행마다 개발 인증서를 **새로 발급**한다. 네 번(run #1~#4)
+만에 계정 한도를 채웠다. run #3 이 성공한 건 마지막 한 칸을 쓴 것이고, 그 뒤로는 전부 막힌다.
+
+**안 통한 두 가지도 남긴다** — 같은 길을 다시 파지 않도록.
+
+1. `CODE_SIGN_IDENTITY="Apple Distribution"` 오버라이드 (run #5). 명령줄 빌드 설정이
+   Firebase·GoogleUtilities 등 SPM 타깃 **전부**에 퍼져 `requires a development team` 이
+   되고, App 타깃은 `automatically signed for development, but a conflicting code signing
+   identity Apple Distribution has been manually specified` 로 끝난다.
+   자동 서명은 아카이브 단계에서 개발 서명을 고집한다
+2. `CODE_SIGNING_ALLOWED=NO` 로 서명을 끄기 (run #6). 빌드도 내보내기도 **통과한다.**
+   그런데 나온 IPA 의 권한이 넷뿐이다 — `application-identifier` ·
+   `beta-reports-active` · `team-identifier` · `get-task-allow`.
+   **`aps-environment` 가 없다 = 푸시를 못 받는 빌드.** 서명이 없으면 권한이 아카이브에
+   박히지 않아 내보내기가 이 앱에 푸시가 필요하다는 사실을 알 길이 없다.
+   **깔아 보기 전에는 모른다** — 아래 확인 단계가 없었으면 그대로 올라갔다
+
+**해결 (run #7).** 애드혹 서명으로 아카이브한다 — `CODE_SIGN_IDENTITY="-"` +
+`CODE_SIGN_STYLE=Manual` + `AD_HOC_CODE_SIGNING_ALLOWED=YES`. 인증서도 프로파일도
+요구하지 않으면서 `App.entitlements` 를 아카이브에 심는다. 내보내기가 그걸 보고 배포
+인증서와 App Store 프로파일로 다시 서명한다. **개발 인증서를 한 장도 만들지 않으므로
+한도와 무관해졌다.**
+
+**업로드 전에 IPA 를 열어 검사하는 단계를 넣었다**(`서명·권한 확인`). `aps-environment` 가
+`production` 이 아니면 거기서 멈춘다. 위 2번을 실제로 잡아낸 단계다.
+
+- [ ] [사람] **쌓인 Apple Development 인증서를 정리할 것.** 지금은 CI 가 더 만들지
+      않지만 한도가 찬 상태 그대로다. Xcode 로 실기기에 붙이거나 로컬에서 개발 빌드를
+      할 때 같은 벽에 부딪힌다. developer.apple.com → Certificates 에서 안 쓰는 것을 폐기
 
 ## D. TestFlight [Desktop]
 
@@ -216,7 +255,13 @@ Desktop 이 1·2 를 고쳤다.** [Code] 는 같은 파일을 다시 건드리�
         **Xcode 에 로그인된 세션**으로 업로드한다. Organizer 의 Distribute App 과 같은 경로다.
         `altool` 은 API 키나 앱 암호를 따로 요구하지만 이쪽은 필요 없다
       - 이 맥에는 API 키(`~/.appstoreconnect/private_keys/`)도 Transporter 도 없다
-- [ ] [Code] 태그 `v1.0.0` 푸시 → `ios-release.yml` 이 TestFlight 업로드 (CI 경로)
+- [x] [Code] CI 경로로 TestFlight 업로드 — **빌드 `107`, 2026-09-01**
+      (`workflow_dispatch`. 태그 `v1.0.0` 푸시는 아직 안 했다)
+      - 확인한 것: `UPLOAD SUCCEEDED with no errors`,
+        `Authority=Apple Distribution: Nuga Jang (U5796QB9C8)`,
+        권한에 `aps-environment = production` · `beta-reports-active`
+      - **미검증**: TestFlight 에서 처리 완료됐는지, 새 내부 그룹에 실제로 배포됐는지.
+        화면 확인이 필요하다 → [Desktop]
 - [x] [Desktop] App Store Connect → TestFlight 에서 빌드 처리 완료 확인
       - `1.0.0 (1)` — 처리 중 → **테스트 준비 완료**, 90일 후 만료
 - [x] [Desktop] 수출 규정(Export Compliance) — Info.plist 에 면제 선언을 박아 해결
@@ -225,6 +270,15 @@ Desktop 이 1·2 를 고쳤다.** [Code] 는 같은 파일을 다시 건드리�
       - 내부 그룹 `Internal` 생성(자동 배포 켬 — 이후 빌드도 자동으로 간다)
       - `root@nugabox.com`(JangNuga, 계정 소유자) 추가 → 상태 `초대됨`
       - **내부 테스트는 Beta App Review 를 거치지 않는다.** 초대 메일의 링크로 바로 설치된다
+- [ ] [Desktop] **새로 만든 내부 그룹에 "사용 가능한 빌드가 없다"** (2026-09-01 보고)
+      - **새 그룹은 빈 상태로 시작하고 기존 빌드가 소급해서 들어가지 않는다.** 자동 배포를
+        켜도 *앞으로 올라올* 빌드에만 적용된다. 그래서 `103` 이 안 보인 것으로 보인다
+      - **테스터 역할 탓은 아닐 것이다.** 내부 테스터가 될 수 있는 역할에 마케터가 포함된다
+        (Account Holder · Admin · App Manager · Developer · 마케터). 마케터가 못 하는 것은
+        빌드를 올리고 관리하는 쪽이지 받는 쪽이 아니다. 초대 메일·설치는 역할과 무관하다.
+        **화면을 못 보고 한 추론이라 미검증**
+      - 할 일 둘 — 새 그룹의 **자동 배포**가 켜져 있는지 보고(꺼져 있으면 `107` 도 안 간다),
+        즉시 채우려면 TestFlight → 빌드 → iOS → 해당 빌드 → **그룹에 추가**
 - [ ] [사람] 실기기 설치 → `docs/test/ios.md` 의 ★ 항목 확인
       - 특히 **Plex 딥링크**. 스킴은 Android APK 근거라 iOS 는 형식이 다를 수 있다
 - [x] [Desktop] Play Console 내부 테스트 트랙에 AAB 올라갔는지 확인
