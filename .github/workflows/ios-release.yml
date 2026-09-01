@@ -107,12 +107,26 @@ jobs:
           echo "빌드번호: $BUILD"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD" ios/App/App/Info.plist
 
+      # **`CODE_SIGN_IDENTITY` 를 덮어쓰는 이유.** Capacitor 템플릿이 Release 구성에까지
+      # `iPhone Developer` 를 박아 둬서(`App.xcodeproj/project.pbxproj`) 아카이브가 *개발*
+      # 인증서를 요구한다. 러너는 매번 새 머신이라 키체인이 비어 있고,
+      # `-allowProvisioningUpdates` 가 그때마다 개발 인증서를 새로 발급한다. 네 번 만에
+      # 계정 한도에 걸려 이렇게 끝났다 (2026-09-01 실제로 겪음):
+      #
+      #     error: Choose a certificate to revoke. Your account has reached the
+      #            maximum number of certificates.
+      #     error: No profiles for 'com.nugabox.nuplex' were found
+      #
+      # 배포 인증서는 클라우드 관리라 Apple 이 대신 들고 있어 이 한도와 무관하다.
+      # 그래서 아카이브부터 배포 서명으로 간다 — 개발 인증서를 아예 만들지 않는다.
+      # pbxproj 는 Desktop 소유 영역이라(CLAUDE.md §2.2-6) 여기서 빌드 설정으로만 덮는다.
       - name: 아카이브
         working-directory: ios/App
         run: |
           xcodebuild -scheme App -configuration Release \
             -destination "generic/platform=iOS" \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
             -allowProvisioningUpdates \
             -authenticationKeyPath ~/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8 \
             -authenticationKeyID "$APPSTORE_KEY_ID" \
@@ -122,7 +136,7 @@ jobs:
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
 
-      # 아카이브는 개발 인증서로 서명돼 나온다. 배포 서명은 이 단계에서 붙으므로
+      # 아카이브가 이미 배포 서명이어도 이 단계가 App Store 프로파일로 다시 서명한다.
       # -allowProvisioningUpdates 를 여기에도 넘겨야 한다(ios/App/exportOptions.plist 주석).
       - name: IPA 내보내기
         run: |
