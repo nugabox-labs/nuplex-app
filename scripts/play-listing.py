@@ -40,7 +40,15 @@ from google.oauth2 import service_account
 PACKAGE = "com.nugabox.nuplex"
 LANGUAGE = "ko-KR"
 BASE = "https://androidpublisher.googleapis.com/androidpublisher/v3"
-UPLOAD = "https://androidpublisher.googleapis.com/upload/androidpublisher/v3"
+
+# **업로드 호스트가 둘이다.** `androidpublisher.googleapis.com/upload/...` 는
+# `Could not find handler for this request` 로 404 가 난다(2026-09-01 확인).
+# 미디어 업로드는 `www.googleapis.com` 쪽에 붙어 있다. 어느 쪽이 통했는지 로그에
+# 남기려고 목록으로 둔다 — 나중에 반대로 바뀌어도 바로 보인다.
+UPLOAD_HOSTS = [
+    "https://www.googleapis.com/upload/androidpublisher/v3",
+    "https://androidpublisher.googleapis.com/upload/androidpublisher/v3",
+]
 SCOPE = "https://www.googleapis.com/auth/androidpublisher"
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -163,15 +171,16 @@ def main() -> None:
             tolerate_404=True,
         )
         for p in paths:
-            call(
-                "POST",
-                f"{UPLOAD}/applications/{PACKAGE}/edits/{edit_id}"
-                f"/images/{LANGUAGE}/{kind}?uploadType=media",
-                tok,
-                body=p.read_bytes(),
-                content_type="image/png",
-            )
-            print(f"올림: {kind} ← {p.name}")
+            body = p.read_bytes()
+            for i, host in enumerate(UPLOAD_HOSTS):
+                url = (f"{host}/applications/{PACKAGE}/edits/{edit_id}"
+                       f"/images/{LANGUAGE}/{kind}?uploadType=media")
+                last = i == len(UPLOAD_HOSTS) - 1
+                got = call("POST", url, tok, body=body,
+                           content_type="image/png", tolerate_404=not last)
+                if got or last:
+                    print(f"올림: {kind} ← {p.name}  ({host.split('/')[2]})")
+                    break
 
     call(
         "PUT",
