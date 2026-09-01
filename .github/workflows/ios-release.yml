@@ -107,7 +107,7 @@ jobs:
           echo "빌드번호: $BUILD"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD" ios/App/App/Info.plist
 
-      # **`CODE_SIGN_IDENTITY` 를 덮어쓰는 이유.** Capacitor 템플릿이 Release 구성에까지
+      # **아카이브에서 서명을 끄는 이유.** Capacitor 템플릿이 Release 구성에까지
       # `iPhone Developer` 를 박아 둬서(`App.xcodeproj/project.pbxproj`) 아카이브가 *개발*
       # 인증서를 요구한다. 러너는 매번 새 머신이라 키체인이 비어 있고,
       # `-allowProvisioningUpdates` 가 그때마다 개발 인증서를 새로 발급한다. 네 번 만에
@@ -117,27 +117,30 @@ jobs:
       #            maximum number of certificates.
       #     error: No profiles for 'com.nugabox.nuplex' were found
       #
-      # 배포 인증서는 클라우드 관리라 Apple 이 대신 들고 있어 이 한도와 무관하다.
-      # 그래서 아카이브부터 배포 서명으로 간다 — 개발 인증서를 아예 만들지 않는다.
-      # pbxproj 는 Desktop 소유 영역이라(CLAUDE.md §2.2-6) 여기서 빌드 설정으로만 덮는다.
+      # **`CODE_SIGN_IDENTITY="Apple Distribution"` 으로 덮는 방법은 안 된다.** 같은 날
+      # 시도했고 두 군데서 걸렸다 — 명령줄 설정이 Firebase·GoogleUtilities 등 SPM 타깃
+      # 전부에 퍼져 `requires a development team` 이 되고, App 타깃은
+      # `automatically signed for development, but a conflicting code signing identity
+      # Apple Distribution has been manually specified` 로 끝난다. 자동 서명은 아카이브
+      # 단계에서 개발 서명을 고집한다.
+      #
+      # 그래서 아카이브는 서명 없이 만들고 배포 서명은 내보내기에만 맡긴다. 인증서를
+      # 한 장도 만들지 않으므로 한도와 무관해진다. pbxproj 는 Desktop 소유 영역이라
+      # (CLAUDE.md §2.2-6) 여기서 빌드 설정으로만 덮는다.
       - name: 아카이브
         working-directory: ios/App
         run: |
           xcodebuild -scheme App -configuration Release \
             -destination "generic/platform=iOS" \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8 \
-            -authenticationKeyID "$APPSTORE_KEY_ID" \
-            -authenticationKeyIssuerID "$APPSTORE_ISSUER_ID" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
             archive
-        env:
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
 
-      # 아카이브가 이미 배포 서명이어도 이 단계가 App Store 프로파일로 다시 서명한다.
-      # -allowProvisioningUpdates 를 여기에도 넘겨야 한다(ios/App/exportOptions.plist 주석).
+      # 서명은 전부 여기서 붙는다 — 배포 인증서와 App Store 프로파일 모두.
+      # -allowProvisioningUpdates 가 있어야 한다(ios/App/exportOptions.plist 주석).
+      # 배포 인증서는 클라우드 관리라 Apple 이 대신 들고 있어 개발 인증서 한도와 무관하다.
       - name: IPA 내보내기
         run: |
           xcodebuild -exportArchive \
@@ -151,6 +154,34 @@ jobs:
         env:
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+
+      # **서명 없는 아카이브에서 내보내면 권한(entitlements)이 조용히 빠질 수 있다.**
+      # 아카이브에 박힌 권한이 없으니 내보내기가 프로파일을 보고 다시 붙이는데, 그게
+      # 어긋나면 푸시가 안 되는 빌드가 TestFlight 까지 올라간다 — 앱을 깔아 보기 전에는
+      # 모른다. 그래서 추측하지 않고 IPA 를 열어 확인하고, 없으면 여기서 멈춘다.
+      - name: 서명·권한 확인
+        run: |
+          cd "$RUNNER_TEMP"
+          rm -rf ipa_check && mkdir ipa_check
+          unzip -q export/App.ipa -d ipa_check
+          APP=$(ls -d ipa_check/Payload/*.app)
+
+          echo "── 서명 ──"
+          codesign -dvvv "$APP" 2>&1 | grep -E "Authority|TeamIdentifier" || true
+
+          echo "── 권한 ──"
+          ENT=$(codesign -d --entitlements :- "$APP" 2>/dev/null)
+          echo "$ENT"
+
+          if ! echo "$ENT" | grep -q "aps-environment"; then
+            echo "::error::IPA 에 aps-environment 가 없습니다. 이 빌드는 푸시를 받지 못합니다."
+            exit 1
+          fi
+          if ! echo "$ENT" | grep -q "production"; then
+            echo "::error::aps-environment 가 production 이 아닙니다. TestFlight 푸시가 동작하지 않습니다."
+            exit 1
+          fi
+          echo "푸시 권한 확인됨 (aps-environment: production)"
 
       - name: TestFlight 업로드
         run: |
